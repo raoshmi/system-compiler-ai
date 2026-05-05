@@ -22,6 +22,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    return {"status": "alive", "service": "AppForge AI Backend"}
+
 class PromptRequest(BaseModel):
     prompt: str
 
