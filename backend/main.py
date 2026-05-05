@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from .intent import extract_intent
-from .architect import design_architecture
-from .schema import generate_schema
-from .validator import validate_schema, repair_schema
+from intent import extract_intent
+from architect import design_architecture
+from schema import generate_schema
+from validator import validate_schema, repair_schema
 import time
 
 app = FastAPI()
