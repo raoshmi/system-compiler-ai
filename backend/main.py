@@ -32,26 +32,36 @@ class PromptRequest(BaseModel):
 @app.post("/generate")
 async def generate_app(request: PromptRequest):
     start_time = time.time()
+    print(f"DEBUG: Starting generation for prompt: {request.prompt[:50]}...")
     try:
         # Stage 1: Intent
+        print("DEBUG: Stage 1 - Extracting Intent...")
         intent = extract_intent(request.prompt)
+        print("DEBUG: Intent extracted successfully.")
         
         # Stage 2: Architecture
+        print("DEBUG: Stage 2 - Designing Architecture...")
         architecture = design_architecture(intent)
+        print("DEBUG: Architecture designed successfully.")
         
         # Stage 3: Schema
+        print("DEBUG: Stage 3 - Generating Schema...")
         config = generate_schema(architecture)
+        print("DEBUG: Schema generated successfully.")
         
         # Stage 4: Validation & Repair
+        print("DEBUG: Stage 4 - Validating...")
         errors = validate_schema(config)
         repair_count = 0
         if errors:
+            print(f"DEBUG: Validation errors found: {len(errors)}. Repairing...")
             config = repair_schema(config, errors)
             repair_count += 1
-            # Re-validate after repair
             errors = validate_schema(config)
+            print("DEBUG: Repair completed.")
 
         end_time = time.time()
+        print(f"DEBUG: Generation complete in {end_time - start_time:.2f}s")
         
         return {
             "success": True,
@@ -65,6 +75,7 @@ async def generate_app(request: PromptRequest):
             }
         }
     except Exception as e:
+        print(f"ERROR: Generation failed at {time.time()} - {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
