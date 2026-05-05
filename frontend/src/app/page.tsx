@@ -21,6 +21,9 @@ import {
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
+import JSZip from "jszip";
+import yaml from "js-yaml";
+import { Download, FileJson, FileCode } from "lucide-react";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -109,13 +112,43 @@ export default function Home() {
 
   const handleExport = (format: 'json' | 'yaml') => {
     if (!result) return;
-    const data = JSON.stringify(result.data, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
+    const content = format === 'json' 
+      ? JSON.stringify(result.data, null, 2)
+      : yaml.dump(result.data);
+    
+    const blob = new Blob([content], { type: format === 'json' ? 'application/json' : 'text/yaml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `app-config.${format}`;
     a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadZip = async () => {
+    if (!result) return;
+    const zip = new JSZip();
+    
+    // Add schemas
+    zip.file("schemas/db.json", JSON.stringify(result.data.dbSchema, null, 2));
+    zip.file("schemas/api.json", JSON.stringify(result.data.apiSchema, null, 2));
+    zip.file("schemas/ui.json", JSON.stringify(result.data.uiSchema, null, 2));
+    zip.file("schemas/auth.json", JSON.stringify(result.data.authSchema, null, 2));
+    
+    // Add code if generated
+    if (generatedCode) {
+      zip.file("code/page.tsx", generatedCode.reactCode);
+      zip.file("code/main.py", generatedCode.apiCode);
+      zip.file("code/migration.sql", generatedCode.dbCode);
+    }
+    
+    const content = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(content);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `appforge-bundle-${Date.now()}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleGenerate = async () => {
@@ -144,7 +177,7 @@ export default function Home() {
   };
 
   return (
-    <main className={`container ${isDarkMode ? 'dark-theme' : 'light-theme'}`}>
+    <main className={`container ${isDarkMode ? '' : 'light-theme'}`}>
       {/* Sidebar for History */}
       <div style={{ 
         position: 'fixed', 
@@ -152,13 +185,13 @@ export default function Home() {
         top: 0, 
         bottom: 0, 
         width: '300px', 
-        background: 'rgba(0,0,0,0.4)', 
-        backdropFilter: 'blur(10px)', 
-        borderRight: '1px solid rgba(255,255,255,0.1)',
+        background: 'var(--sidebar)', 
+        backdropFilter: 'blur(20px)', 
+        borderRight: '1px solid var(--border)',
         padding: '2rem',
         zIndex: 100,
         transform: history.length > 0 ? 'translateX(0)' : 'translateX(-100%)',
-        transition: 'transform 0.3s ease'
+        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
         <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <HistoryIcon size={20} color="var(--primary)" />
@@ -330,12 +363,29 @@ export default function Home() {
               )}
             </div>
             
-            <div style={{ marginTop: '2rem', display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => handleExport('json')} className="btn" style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem' }}>Export JSON</button>
-              <button onClick={handleGenerateCode} className="btn" style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem', background: 'var(--primary)' }}>
-                {codeLoading ? <RefreshCw className="spin" size={14} /> : <Zap size={14} />}
-                {codeLoading ? " Coding..." : " Generate Code"}
+            <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={() => handleExport('json')} className="btn" style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)' }}>
+                  <FileJson size={14} style={{ marginRight: '6px' }} />
+                  JSON
+                </button>
+                <button onClick={() => handleExport('yaml')} className="btn" style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)' }}>
+                  <FileCode size={14} style={{ marginRight: '6px' }} />
+                  YAML
+                </button>
+              </div>
+              
+              <button onClick={handleGenerateCode} className="btn" style={{ fontSize: '0.85rem', padding: '0.75rem', background: 'var(--primary)' }}>
+                {codeLoading ? <RefreshCw className="spin" size={16} /> : <Zap size={16} />}
+                {codeLoading ? " Coding..." : " Generate Full Source Code"}
               </button>
+
+              {generatedCode && (
+                <button onClick={handleDownloadZip} className="btn" style={{ fontSize: '0.85rem', padding: '0.75rem', background: 'var(--accent)', color: 'black' }}>
+                  <Download size={16} style={{ marginRight: '6px' }} />
+                  Download Project Bundle (.zip)
+                </button>
+              )}
             </div>
 
             <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '2rem' }}>
