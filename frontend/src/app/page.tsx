@@ -10,7 +10,9 @@ import {
   CheckCircle, 
   AlertCircle, 
   RefreshCw,
-  Activity
+  Activity,
+  Zap,
+  ShieldAlert
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
@@ -122,18 +124,18 @@ export default function Home() {
               Compiler Metrics
             </h3>
             <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-val">{(result.latency).toFixed(2)}s</div>
-                <div className="stat-label">Latency</div>
+
+            <div style={{ marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ padding: '0.25rem 0.75rem', borderRadius: '9999px', background: 'rgba(20, 184, 166, 0.1)', border: '1px solid rgba(20, 184, 166, 0.2)', color: '#2dd4bf', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Zap size={12} />
+                Latency: {result.latency.toFixed(2)}s
               </div>
-              <div className="stat-card">
-                <div className="stat-val">{result.repairCount}</div>
-                <div className="stat-label">Repairs</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-val">{result.errors.length === 0 ? 'YES' : 'NO'}</div>
-                <div className="stat-label">Validated</div>
-              </div>
+              {result.repairCount > 0 && (
+                <div style={{ padding: '0.25rem 0.75rem', borderRadius: '9999px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', color: '#fbbf24', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <ShieldAlert size={12} />
+                  Repaired: {result.repairCount} Errors
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: '2rem' }}>
