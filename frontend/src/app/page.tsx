@@ -36,9 +36,46 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("db");
   const [result, setResult] = useState<any>(null);
-  const [stage, setStage] = useState(0); // 0: Idle, 1: Intent, 2: Arch, 3: Schema, 4: Done
+  const [stage, setStage] = useState(0); 
   const [history, setHistory] = useState<any[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<any>(null);
+  const [codeLoading, setCodeLoading] = useState(false);
+
+  const handleChat = async () => {
+    if (!chatInput || !result) return;
+    setChatLoading(true);
+    try {
+      const response = await axios.post(`${BACKEND_URL}/refine`, { 
+        config: result.data, 
+        instruction: chatInput 
+      });
+      setResult({ ...result, data: response.data.data });
+      setChatInput("");
+    } catch (error) {
+      console.error("Refinement failed", error);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleGenerateCode = async () => {
+    if (!result) return;
+    setCodeLoading(true);
+    try {
+      const response = await axios.post(`${BACKEND_URL}/generate-code`, { 
+        schemas: result.data 
+      });
+      setGeneratedCode(response.data.data);
+      setActiveTab("code");
+    } catch (error) {
+      console.error("Code generation failed", error);
+    } finally {
+      setCodeLoading(false);
+    }
+  };
 
   // Load history and theme
   useEffect(() => {
@@ -295,58 +332,72 @@ export default function Home() {
             
             <div style={{ marginTop: '2rem', display: 'flex', gap: '0.5rem' }}>
               <button onClick={() => handleExport('json')} className="btn" style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem' }}>Export JSON</button>
-              <button onClick={() => handleExport('json')} className="btn" style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }}>Export YAML</button>
+              <button onClick={handleGenerateCode} className="btn" style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem', background: 'var(--primary)' }}>
+                {codeLoading ? <RefreshCw className="spin" size={14} /> : <Zap size={14} />}
+                {codeLoading ? " Coding..." : " Generate Code"}
+              </button>
+            </div>
+
+            <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '2rem' }}>
+              <h4 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Send size={16} color="var(--primary)" />
+                Refine with Chat
+              </h4>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input 
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="e.g. add payments, remove auth..."
+                  style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.5rem 1rem', borderRadius: '8px', color: 'white', fontSize: '0.8rem' }}
+                />
+                <button onClick={handleChat} disabled={chatLoading} className="btn" style={{ padding: '0.5rem 1rem' }}>
+                  {chatLoading ? <RefreshCw className="spin" size={14} /> : "Update"}
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Code Viewer */}
           <div className="card">
             <div className="output-tabs">
-              <button 
-                className={`tab ${activeTab === 'db' ? 'active' : ''}`}
-                onClick={() => setActiveTab('db')}
-              >
-                <Database size={14} style={{ marginRight: '6px' }} />
-                DB Schema
-              </button>
-              <button 
-                className={`tab ${activeTab === 'api' ? 'active' : ''}`}
-                onClick={() => setActiveTab('api')}
-              >
-                <Cpu size={14} style={{ marginRight: '6px' }} />
-                API Config
-              </button>
-              <button 
-                className={`tab ${activeTab === 'ui' ? 'active' : ''}`}
-                onClick={() => setActiveTab('ui')}
-              >
-                <Layout size={14} style={{ marginRight: '6px' }} />
-                UI Schema
-              </button>
-              <button 
-                className={`tab ${activeTab === 'auth' ? 'active' : ''}`}
-                onClick={() => setActiveTab('auth')}
-              >
-                <Lock size={14} style={{ marginRight: '6px' }} />
-                Auth Rules
-              </button>
+              <button className={`tab ${activeTab === 'db' ? 'active' : ''}`} onClick={() => setActiveTab('db')}>DB</button>
+              <button className={`tab ${activeTab === 'api' ? 'active' : ''}`} onClick={() => setActiveTab('api')}>API</button>
+              <button className={`tab ${activeTab === 'ui' ? 'active' : ''}`} onClick={() => setActiveTab('ui')}>UI</button>
+              <button className={`tab ${activeTab === 'auth' ? 'active' : ''}`} onClick={() => setActiveTab('auth')}>Auth</button>
+              {generatedCode && (
+                <button className={`tab ${activeTab === 'code' ? 'active' : ''}`} onClick={() => setActiveTab('code')} style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', marginLeft: '0.5rem', paddingLeft: '1rem' }}>
+                  <Zap size={14} style={{ marginRight: '6px' }} />
+                  Source Code
+                </button>
+              )}
             </div>
 
             <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <pre>
-                  {JSON.stringify(
-                    activeTab === 'db' ? result.data.dbSchema :
-                    activeTab === 'api' ? result.data.apiSchema :
-                    activeTab === 'ui' ? result.data.uiSchema :
-                    result.data.authSchema, 
-                    null, 2
+              <motion.div key={activeTab} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
+                <pre style={{ maxHeight: '600px', overflowY: 'auto' }}>
+                  {activeTab === 'code' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                      <div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>// NEXT.JS COMPONENT</div>
+                        {generatedCode.reactCode}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>// FASTAPI ROUTES</div>
+                        {generatedCode.apiCode}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>// SQL MIGRATIONS</div>
+                        {generatedCode.dbCode}
+                      </div>
+                    </div>
+                  ) : (
+                    JSON.stringify(
+                      activeTab === 'db' ? result.data.dbSchema :
+                      activeTab === 'api' ? result.data.apiSchema :
+                      activeTab === 'ui' ? result.data.uiSchema :
+                      result.data.authSchema, 
+                      null, 2
+                    )
                   )}
                 </pre>
               </motion.div>
