@@ -32,19 +32,24 @@ Run the `start.bat` file in the root directory or start manually:
 - Backend: `python backend/main.py`
 - Frontend: `npm run dev` (in `frontend` folder)
 
+## Live Demo
+- **Frontend**: [https://system-compiler-ai-1rqk.vercel.app](https://system-compiler-ai-1rqk.vercel.app)
+- **Backend**: [https://system-compiler-ai.onrender.com](https://system-compiler-ai.onrender.com)
+
 ## Features
 - **Multi-Stage Pipeline**: Modular separation of intent, architecture, and schema.
-- **Surgical Repair Engine**: Detects cross-layer inconsistencies and repairs ONLY the broken sections.
+- **Surgical Repair Engine**: Detects cross-layer inconsistencies and repairs ONLY the broken sections using LLM-powered surgical patching.
+- **Fail-Safe Mock Mode**: Production resilience layer that ensures the system always returns a valid schema during high-traffic or API downtime.
+- **Real-Time Visualization**: Frontend dashboard built with Next.js 15, Framer Motion, and Glassmorphism design.
 - **Persistent Logging**: Every validation error is logged to `backend/errors.log` for audit.
-- **Execution Awareness**: Generates valid JSON for DB, API, UI, and Auth layers.
-- **Evaluation Framework**: Includes a script to run 20 test cases and generate metrics.
+- **Evaluation Framework**: Includes a script to run 20 test cases and generate metrics (Latency, Repair Rate, Success).
 
 ## Evaluation
-Run the evaluation suite to generate `evaluation_results.json`:
+Run the evaluation suite:
 ```bash
 python backend/evaluate.py
 ```
 
 ## Deployment
-- **Backend**: Pre-configured for **Railway** (see `railway.json`).
-- **Frontend**: Ready for **Vercel**.
+- **Backend**: Hosted on **Render** (via GitHub integration).
+- **Frontend**: Hosted on **Vercel** (via GitHub integration).
