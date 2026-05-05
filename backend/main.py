@@ -5,6 +5,7 @@ from intent import extract_intent
 from architect import design_architecture
 from schema import generate_schema
 from validator import validate_schema, repair_schema
+from coder import generate_full_code
 import time
 import sys
 import os
@@ -110,6 +111,26 @@ async def generate_app(request: PromptRequest):
             "data": mock_data,
             "note": "Fail-safe mock mode active (Check GEMINI_API_KEY)"
         }
+
+@app.post("/generate-code")
+async def generate_code(request: dict):
+    try:
+        code = generate_full_code(request["schemas"])
+        return {"success": True, "data": code}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/refine")
+async def refine_config(request: dict):
+    # Expects {"config": {...}, "instruction": "..."}
+    try:
+        from utils import get_llm_response, parse_json
+        prompt = f"Refine the following application configuration based on this instruction: {request['instruction']}\n\nOriginal Config: {request['config']}\n\nReturn the COMPLETE updated JSON."
+        response = get_llm_response(prompt)
+        new_config = parse_json(response)
+        return {"success": True, "data": new_config}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

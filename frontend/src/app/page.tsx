@@ -12,8 +12,13 @@ import {
   RefreshCw,
   Activity,
   Zap,
-  ShieldAlert
+  ShieldAlert,
+  History as HistoryIcon,
+  Sun,
+  Moon,
+  Trash2
 } from "lucide-react";
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 
@@ -32,6 +37,49 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("db");
   const [result, setResult] = useState<any>(null);
   const [stage, setStage] = useState(0); // 0: Idle, 1: Intent, 2: Arch, 3: Schema, 4: Done
+  const [history, setHistory] = useState<any[]>([]);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  // Load history and theme
+  useEffect(() => {
+    const savedHistory = localStorage.getItem("appforge_history");
+    if (savedHistory) setHistory(JSON.parse(savedHistory));
+    
+    const savedTheme = localStorage.getItem("appforge_theme");
+    if (savedTheme === "light") setIsDarkMode(false);
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    localStorage.setItem("appforge_theme", newTheme ? "dark" : "light");
+  };
+
+  const saveToHistory = (data: any, promptText: str) => {
+    const newItem = { id: Date.now(), prompt: promptText, result: data, timestamp: new Date().toISOString() };
+    const newHistory = [newItem, ...history].slice(0, 10); // Keep last 10
+    setHistory(newHistory);
+    localStorage.setItem("appforge_history", JSON.stringify(newHistory));
+  };
+
+  const TEMPLATES = [
+    { name: "E-commerce", prompt: "Build an e-commerce store with product catalog, cart, payments, and admin inventory management." },
+    { name: "CRM", prompt: "Build a CRM with contacts, leads, and a dashboard. Only managers can see the 'Deals' page." },
+    { name: "SaaS", prompt: "Build a SaaS platform with user subscription plans, project management, and team collaboration." },
+    { name: "Blog", prompt: "Build a tech blog with markdown support, comments, and role-based access for editors." },
+    { name: "Social App", prompt: "Build a social network with user profiles, post feed, likes, and private messaging." }
+  ];
+
+  const handleExport = (format: 'json' | 'yaml') => {
+    if (!result) return;
+    const data = JSON.stringify(result.data, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `app-config.${format}`;
+    a.click();
+  };
 
   const handleGenerate = async () => {
     if (!prompt) return;
@@ -47,6 +95,7 @@ export default function Home() {
       const response = await axios.post(`${BACKEND_URL}/generate`, { prompt });
       
       setResult(response.data);
+      saveToHistory(response.data, prompt);
       setStage(4);
     } catch (error) {
       console.error("Generation failed", error);
@@ -58,7 +107,70 @@ export default function Home() {
   };
 
   return (
-    <main className="container">
+    <main className={`container ${isDarkMode ? 'dark-theme' : 'light-theme'}`}>
+      {/* Sidebar for History */}
+      <div style={{ 
+        position: 'fixed', 
+        left: 0, 
+        top: 0, 
+        bottom: 0, 
+        width: '300px', 
+        background: 'rgba(0,0,0,0.4)', 
+        backdropFilter: 'blur(10px)', 
+        borderRight: '1px solid rgba(255,255,255,0.1)',
+        padding: '2rem',
+        zIndex: 100,
+        transform: history.length > 0 ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'transform 0.3s ease'
+      }}>
+        <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <HistoryIcon size={20} color="var(--primary)" />
+          Generation History
+        </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {history.map((item) => (
+            <button 
+              key={item.id} 
+              onClick={() => {
+                setResult(item.result);
+                setPrompt(item.prompt);
+                setStage(4);
+              }}
+              style={{ 
+                textAlign: 'left', 
+                padding: '1rem', 
+                borderRadius: '8px', 
+                background: 'rgba(255,255,255,0.05)', 
+                border: '1px solid rgba(255,255,255,0.05)',
+                color: 'white',
+                fontSize: '0.8rem',
+                cursor: 'pointer'
+              }}
+            >
+              <div style={{ fontWeight: 'bold', marginBottom: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {item.prompt}
+              </div>
+              <div style={{ opacity: 0.4, fontSize: '0.7rem' }}>
+                {new Date(item.timestamp).toLocaleTimeString()}
+              </div>
+            </button>
+          ))}
+          {history.length > 0 && (
+            <button 
+              onClick={() => {
+                setHistory([]);
+                localStorage.removeItem("appforge_history");
+              }}
+              className="btn" 
+              style={{ marginTop: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444' }}
+            >
+              <Trash2 size={14} style={{ marginRight: '6px' }} />
+              Clear History
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="bg-gradient" />
       <div className="bg-glow" style={{ top: '10%', right: '10%' }} />
       <div className="bg-glow" style={{ bottom: '10%', left: '10%', background: 'radial-gradient(circle, rgba(168, 85, 247, 0.15) 0%, transparent 70%)' }} />
@@ -66,6 +178,12 @@ export default function Home() {
       <header className="header">
         <h1 className="title">APPFORGE.AI</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button onClick={toggleTheme} className="btn" style={{ padding: '0.5rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          
+          <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }} />
+
           <div className={`step ${stage >= 1 ? 'active' : ''} ${stage > 1 ? 'completed' : ''}`}>
             <Send size={18} />
           </div>
@@ -82,6 +200,18 @@ export default function Home() {
       </header>
 
       <section className="prompt-section">
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          {TEMPLATES.map((t) => (
+            <button 
+              key={t.name}
+              className="btn" 
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+              onClick={() => setPrompt(t.prompt)}
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
         <div className="card">
           <textarea 
             placeholder="e.g. Build a CRM with login, contacts, dashboard, role-based access, and premium plan with payments. Admins can see analytics."
@@ -123,9 +253,15 @@ export default function Home() {
               <Activity size={20} color="var(--primary)" />
               Compiler Metrics
             </h3>
-            <div className="stats-grid">
+            
+            <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+                {Math.max(0, 100 - (result.repairCount * 10) - (result.errors.length * 5))}%
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '0.25rem' }}>Quality Score</div>
+            </div>
 
-            <div style={{ marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div style={{ padding: '0.25rem 0.75rem', borderRadius: '9999px', background: 'rgba(20, 184, 166, 0.1)', border: '1px solid rgba(20, 184, 166, 0.2)', color: '#2dd4bf', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Zap size={12} />
                 Latency: {result.latency.toFixed(2)}s
@@ -155,6 +291,11 @@ export default function Home() {
                   ))}
                 </ul>
               )}
+            </div>
+            
+            <div style={{ marginTop: '2rem', display: 'flex', gap: '0.5rem' }}>
+              <button onClick={() => handleExport('json')} className="btn" style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem' }}>Export JSON</button>
+              <button onClick={() => handleExport('json')} className="btn" style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }}>Export YAML</button>
             </div>
           </div>
 
