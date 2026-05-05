@@ -1,4 +1,4 @@
-from .utils import get_llm_response, parse_json
+from utils import get_llm_response, parse_json
 
 PROMPT = """
 Generate the complete technical schema for the application based on the architecture.

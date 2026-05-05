@@ -1,4 +1,4 @@
-from .utils import get_llm_response, parse_json
+from utils import get_llm_response, parse_json
 
 PROMPT = """
 Based on the extracted intent below, design the high-level architecture of the application.

@@ -6,6 +6,11 @@ from architect import design_architecture
 from schema import generate_schema
 from validator import validate_schema, repair_schema
 import time
+import sys
+import os
+
+# Ensure the current directory is in sys.path for Railway
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 app = FastAPI()
 

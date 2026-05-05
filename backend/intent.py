@@ -1,4 +1,4 @@
-from .utils import get_llm_response, parse_json
+from utils import get_llm_response, parse_json
 
 PROMPT = """
 Analyze the following user requirement for a software application.

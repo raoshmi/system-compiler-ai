@@ -1,6 +1,6 @@
 import datetime
 import json
-from .utils import get_llm_response, parse_json
+from utils import get_llm_response, parse_json
 
 def log_error(error_msg: str):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
