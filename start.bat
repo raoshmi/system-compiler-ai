@@ -1,0 +1,6 @@
+@echo off
+echo Starting AppForge Backend...
+start cmd /k "cd backend && python main.py"
+echo Starting AppForge Frontend...
+start cmd /k "cd frontend && npm run dev"
+echo Both servers starting. Frontend at http://localhost:3000, Backend at http://localhost:8000
