@@ -5,6 +5,8 @@ import time
 import os
 import json
 
+# Import our custom modules
+from utils import get_llm_response, parse_json
 from intent import extract_intent
 from architect import design_architecture
 from schema import generate_schema
@@ -24,45 +26,51 @@ app.add_middleware(
 class PromptRequest(BaseModel):
     prompt: str
 
+@app.get("/")
+async def root():
+    return {"status": "healthy", "service": "AppForge AI Backend"}
+
+@app.get("/debug")
+async def debug_status():
+    """Check the status of environment variables (keys are masked)."""
+    return {
+        "GROQ_KEY": "SET" if os.getenv("GROQ_API_KEY") else "MISSING",
+        "GEMINI_KEY": "SET" if os.getenv("GEMINI_API_KEY") else "MISSING",
+        "OPENROUTER_KEY": "SET" if os.getenv("OPENROUTER_API_KEY") else "MISSING",
+        "ENVIRONMENT": os.getenv("NODE_ENV", "development")
+    }
+
 def get_dynamic_mock(prompt: str):
     prompt_lower = prompt.lower()
-    # Default Template
     mock_data = {
         "dbSchema": { "tables": [{ "name": "contacts", "columns": [{ "name": "id", "type": "uuid", "primaryKey": True }, { "name": "name", "type": "string" }] }] },
         "apiSchema": { "endpoints": [{ "path": "/api/contacts", "method": "GET", "description": "Get contacts" }] },
         "uiSchema": { "pages": [{ "route": "/dashboard", "title": "Dashboard", "layout": "grid", "components": [] }] },
         "authSchema": { "roles": ["user"], "rules": [] }
     }
-
     if "gaming" in prompt_lower or "game" in prompt_lower:
         mock_data["uiSchema"]["pages"][0]["title"] = "Gaming Platform Alpha"
-        mock_data["dbSchema"]["tables"] = [
-            { "name": "profiles", "columns": [{ "name": "id", "type": "uuid", "primaryKey": True }, { "name": "username", "type": "string" }, { "name": "avatar", "type": "string" }] },
-            { "name": "matchmaking", "columns": [{ "name": "id", "type": "uuid", "primaryKey": True }, { "name": "status", "type": "string" }] }
-        ]
     return mock_data
 
 @app.post("/generate")
 async def generate_app(request: PromptRequest):
     start_time = time.time()
     try:
-        # Stage 1: Intent
-        intent = extract_intent(request.prompt)
+        # Step 1: Extract Intent
+        print(f"DEBUG: Processing prompt: {request.prompt[:50]}...")
+        intent_raw = extract_intent(request.prompt)
         
-        # Stage 2: Architecture
-        architecture = design_architecture(intent)
+        # Step 2: Design Architecture
+        arch_raw = design_architecture(intent_raw)
         
-        # Stage 3: Schema Generation
-        config = generate_schema(architecture)
+        # Step 3: Generate Schema
+        config = generate_schema(arch_raw)
         
-        # Stage 4: Validation & Repair
-        repair_count = 0
+        # Step 4: Validate and optional Repair
         errors = validate_schema(config)
-        
-        while errors and repair_count < 2:
-            print(f"DEBUG: Validation errors found. Repairing (Attempt {repair_count + 1})...")
+        repair_count = 0
+        if errors and repair_count < 1:
             config = repair_schema(config, errors)
-            errors = validate_schema(config)
             repair_count += 1
             
         latency = round(time.time() - start_time, 2)
@@ -71,24 +79,28 @@ async def generate_app(request: PromptRequest):
             "success": True,
             "latency": latency,
             "repairCount": repair_count,
-            "errors": errors,
             "data": config
         }
         
     except Exception as e:
-        print(f"ERROR: Generation failed - {str(e)}")
-        gemini_status = "FOUND" if os.getenv("GEMINI_API_KEY") else "MISSING"
+        print(f"ERROR in Pipeline: {str(e)}")
+        # Provide a smart mock with error details
         mock_data = get_dynamic_mock(request.prompt)
-        mock_data["systemNote"] = f"AI Error: {str(e)}\nGemini Key Status: {gemini_status}"
+        
+        # Determine which keys are missing for the error message
+        status = {
+            "GROQ": "SET" if os.getenv("GROQ_API_KEY") else "MISSING",
+            "GEMINI": "SET" if os.getenv("GEMINI_API_KEY") else "MISSING",
+            "OPENROUTER": "SET" if os.getenv("OPENROUTER_API_KEY") else "MISSING"
+        }
         
         return {
-            "success": True,
-            "latency": 0.5,
-            "repairCount": 0,
-            "errors": [f"AI Error: {str(e)}"],
+            "success": False,
+            "error": str(e),
+            "key_status": status,
             "data": mock_data
         }
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -1,120 +1,91 @@
 import os
-from groq import Groq
-from dotenv import load_dotenv
 import json
-import time
-
-# Load .env
-load_dotenv()
-load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
-
-# Configure Groq
-groq_key = os.getenv("GROQ_API_KEY")
-groq_client = None
-if groq_key:
-    groq_client = Groq(api_key=groq_key)
-
+import re
 import google.generativeai as genai
-# Configure Gemini as fallback
-def get_llm_response(prompt: str, model_name: str = "llama-3.3-70b-versatile") -> str:
-    # Explicitly scan environment for debugging
-    all_keys = os.environ.keys()
-    gemini_key = os.getenv("GEMINI_API_KEY")
+from groq import Groq
+import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
+
+def get_llm_response(prompt: str) -> str:
+    # 1. Try Groq (Fastest)
     groq_key = os.getenv("GROQ_API_KEY")
-    
-    print(f"--- [ENV SCAN START] ---")
-    print(f"GEMINI_API_KEY: {'[PRESENT]' if 'GEMINI_API_KEY' in all_keys else '[MISSING]'}")
-    print(f"GROQ_API_KEY: {'[PRESENT]' if 'GROQ_API_KEY' in all_keys else '[MISSING]'}")
-    print(f"--- [ENV SCAN END] ---")
-
-    # Priority 1: Gemini (FORCE it if key exists)
-    if gemini_key and len(gemini_key.strip()) > 10:
-        print(f"DEBUG: Using Gemini Flash (Priority 1)...")
+    if groq_key:
         try:
-            genai.configure(api_key=gemini_key.strip())
-            model = genai.GenerativeModel("gemini-1.5-flash")
-            response = model.generate_content(prompt)
-            if response and response.text:
-                return response.text
-            else:
-                raise Exception("Gemini returned empty text")
-        except Exception as e:
-            print(f"ERROR: Gemini Priority Call Failed: {str(e)}")
-            # If Gemini fails, proceed to Groq
-
-    # Priority 2: Groq
-    if groq_client:
-        model = "llama-3.3-70b-versatile"
-        print(f"DEBUG: Calling Groq AI ({model})...")
-        try:
-            chat_completion = groq_client.chat.completions.create(
+            print("DEBUG: Trying Groq (llama-3.1-8b-instant)...")
+            client = Groq(api_key=groq_key)
+            response = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
                 messages=[
-                    {"role": "system", "content": "Expert architect. Return ONLY compact JSON. No talk."},
+                    {"role": "system", "content": "You are an expert app architect. Return ONLY valid, clean JSON. No markdown, no talk."},
                     {"role": "user", "content": prompt}
                 ],
-                model=model,
-                temperature=0.1,
-                max_tokens=4096, 
+                max_tokens=2000,
+                temperature=0.1
             )
-            return chat_completion.choices[0].message.content
+            return response.choices[0].message.content
         except Exception as e:
-            print(f"ERROR: Groq failed - {str(e)}")
-            raise e
-    
-    raise Exception("No working AI API Key found.")
+            print(f"DEBUG: Groq failed: {e}")
+
+    # 2. Try Gemini (High Context)
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if gemini_key:
+        try:
+            print("DEBUG: Trying Gemini (gemini-1.5-flash)...")
+            genai.configure(api_key=gemini_key)
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            print(f"DEBUG: Gemini failed: {e}")
+
+    # 3. Try OpenRouter (Free Fallback)
+    openrouter_key = os.getenv("OPENROUTER_API_KEY")
+    if openrouter_key:
+        try:
+            print("DEBUG: Trying OpenRouter (mistral-7b-instruct:free)...")
+            with httpx.Client() as client:
+                response = client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {openrouter_key}",
+                        "HTTP-Referer": "https://github.com/raoshmi/system-compiler-ai",
+                        "X-Title": "AppForge AI"
+                    },
+                    json={
+                        "model": "mistralai/mistral-7b-instruct:free",
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": 2000,
+                        "temperature": 0.1
+                    },
+                    timeout=60.0
+                )
+                if response.status_code == 200:
+                    return response.json()["choices"][0]["message"]["content"]
+                else:
+                    print(f"DEBUG: OpenRouter API error: {response.text}")
+        except Exception as e:
+            print(f"DEBUG: OpenRouter failed: {e}")
+
+    raise Exception("All AI providers (Groq, Gemini, OpenRouter) failed or are unavailable.")
 
 def parse_json(text: str) -> dict:
-    # Aggressive cleaning
-    text = text.strip()
-    # Remove markdown code blocks if present
-    if "```" in text:
-        if "```json" in text:
-            text = text.split("```json")[1].split("```")[0].strip()
-        else:
-            text = text.split("```")[1].split("```")[0].strip()
-
+    """Extracts and parses JSON from the LLM response."""
     try:
-        return json.loads(text)
+        # Remove markdown code blocks if present
+        cleaned = re.sub(r'```json\s*|\s*```', '', text).strip()
+        # Find the first { and last }
+        start = cleaned.find('{')
+        end = cleaned.rfind('}')
+        if start != -1 and end != -1:
+            cleaned = cleaned[start:end+1]
+        
+        # Basic fixes for common LLM truncation issues
+        if cleaned.count('{') > cleaned.count('}'):
+            cleaned += '}' * (cleaned.count('{') - cleaned.count('}'))
+        
+        return json.loads(cleaned)
     except Exception as e:
-        # If it's an unterminated string error, try to close the braces/quotes
-        error_msg = str(e)
-        if "Unterminated string" in error_msg or "Expecting" in error_msg:
-            # Try to fix by adding closing braces/brackets
-            temp_text = text
-            # Close open quotes first
-            if temp_text.count('"') % 2 != 0:
-                temp_text += '"'
-            
-            # Balance braces
-            open_braces = temp_text.count('{')
-            close_braces = temp_text.count('}')
-            if open_braces > close_braces:
-                temp_text += '}' * (open_braces - close_braces)
-            
-            # Balance brackets
-            open_brackets = temp_text.count('[')
-            close_brackets = temp_text.count(']')
-            if open_brackets > close_brackets:
-                temp_text += ']' * (open_brackets - close_brackets)
-                
-            try:
-                return json.loads(temp_text)
-            except:
-                pass
-
-        # One last resort: find first { and last }
-        try:
-            start = text.find('{')
-            end = text.rfind('}')
-            if start != -1 and end != -1:
-                return json.loads(text[start:end+1])
-        except:
-            pass
-        raise e
-
-def safe_format(template, **kwargs):
-    result = template
-    for key, value in kwargs.items():
-        placeholder = "{" + key + "}"
-        result = result.replace(placeholder, str(value))
-    return result
+        print(f"DEBUG: JSON Parse Error: {e}\nRaw Text: {text}")
+        raise Exception(f"Failed to parse AI response: {str(e)}")
