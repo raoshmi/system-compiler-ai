@@ -16,22 +16,23 @@ if groq_key:
 
 import google.generativeai as genai
 # Configure Gemini as fallback
-api_key = os.getenv("GEMINI_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
+def get_llm_response(prompt: str, model_name: str = "llama-3.3-70b-versatile") -> str:
+    # Dynamically get keys
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    groq_key = os.getenv("GROQ_API_KEY")
 
-def get_llm_response(prompt: str, model_name: str = "llama-3-3-70b-versatile") -> str:
-    # Priority 1: Gemini (Best for Large Context)
-    if api_key:
-        print("DEBUG: Using Gemini (High Capacity)...")
+    # Priority 1: Gemini
+    if gemini_key:
+        print("DEBUG: Gemini Key Detected! Using Gemini...")
         try:
+            genai.configure(api_key=gemini_key)
             model = genai.GenerativeModel("gemini-1.5-flash")
             response = model.generate_content(prompt)
             return response.text
         except Exception as e:
             print(f"ERROR: Gemini failed - {str(e)}")
 
-    # Priority 2: Groq 70b (Higher TPM than 8b)
+    # Priority 2: Groq
     if groq_client:
         model = "llama-3.3-70b-versatile"
         print(f"DEBUG: Calling Groq AI ({model})...")
