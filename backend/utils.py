@@ -8,6 +8,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def safe_format(template, **kwargs):
+    """Safely format a string by escaping curly braces in values."""
+    safe_kwargs = {k: str(v).replace("{", "{{").replace("}", "}}") for k, v in kwargs.items()}
+    return template.format(**safe_kwargs)
+
 def get_llm_response(prompt: str) -> str:
     # 1. Try Groq (Fastest)
     groq_key = os.getenv("GROQ_API_KEY")
