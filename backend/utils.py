@@ -1,42 +1,80 @@
 import os
-import google.generativeai as genai
+from groq import Groq
 from dotenv import load_dotenv
 import json
+import time
 
+# Load .env
 load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
-# Configure Gemini
-# Ensure GEMINI_API_KEY is set in environment
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Configure Groq
+groq_key = os.getenv("GROQ_API_KEY")
+groq_client = None
+if groq_key:
+    groq_client = Groq(api_key=groq_key)
 
-def get_llm_response(prompt: str, model_name: str = "gemini-1.5-flash") -> str:
-    model = genai.GenerativeModel(model_name)
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.types.GenerationConfig(
-            temperature=0.1 # Keep it deterministic
+def get_llm_response(prompt: str, model_name: str = "llama-3.3-70b-versatile") -> str:
+    if not groq_client:
+        raise Exception("GROQ_API_KEY is missing in .env file.")
+    
+    print(f"DEBUG: Calling Groq AI ({model_name})...")
+    try:
+        # Increase max_tokens to prevent truncation
+        chat_completion = groq_client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": "You are an expert app architect. Always return valid, compact JSON. Do not include conversational text."},
+                {"role": "user", "content": prompt}
+            ],
+            model=model_name,
+            temperature=0.1,
+            max_tokens=8192, 
         )
-    )
-    return response.text
+        return chat_completion.choices[0].message.content
+    except Exception as e:
+        print(f"ERROR: Groq API failed - {str(e)}")
+        raise e
 
 def parse_json(text: str) -> dict:
+    # Aggressive cleaning
     text = text.strip()
+    # Remove markdown code blocks if present
+    if "```" in text:
+        if "```json" in text:
+            text = text.split("```json")[1].split("```")[0].strip()
+        else:
+            text = text.split("```")[1].split("```")[0].strip()
+
     try:
         return json.loads(text)
     except Exception as e:
-        # Fallback for markdown blocks
-        if "```" in text:
-            # Try to find content between ```json and ``` or just ``` and ```
+        # If it's an unterminated string error, try to close the braces/quotes
+        error_msg = str(e)
+        if "Unterminated string" in error_msg or "Expecting" in error_msg:
+            # Try to fix by adding closing braces/brackets
+            temp_text = text
+            # Close open quotes first
+            if temp_text.count('"') % 2 != 0:
+                temp_text += '"'
+            
+            # Balance braces
+            open_braces = temp_text.count('{')
+            close_braces = temp_text.count('}')
+            if open_braces > close_braces:
+                temp_text += '}' * (open_braces - close_braces)
+            
+            # Balance brackets
+            open_brackets = temp_text.count('[')
+            close_brackets = temp_text.count(']')
+            if open_brackets > close_brackets:
+                temp_text += ']' * (open_brackets - close_brackets)
+                
             try:
-                if "```json" in text:
-                    content = text.split("```json")[1].split("```")[0].strip()
-                else:
-                    content = text.split("```")[1].split("```")[0].strip()
-                return json.loads(content)
+                return json.loads(temp_text)
             except:
                 pass
-        
-        # Last resort: try to find the first '{' and last '}'
+
+        # One last resort: find first { and last }
         try:
             start = text.find('{')
             end = text.rfind('}')
@@ -44,5 +82,11 @@ def parse_json(text: str) -> dict:
                 return json.loads(text[start:end+1])
         except:
             pass
-            
         raise e
+
+def safe_format(template, **kwargs):
+    result = template
+    for key, value in kwargs.items():
+        placeholder = "{" + key + "}"
+        result = result.replace(placeholder, str(value))
+    return result

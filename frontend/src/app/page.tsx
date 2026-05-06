@@ -359,6 +359,28 @@ export default function Home() {
 
             <div style={{ marginTop: '2rem' }}>
               <h4 style={{ marginBottom: '1rem' }}>Validation Log</h4>
+              
+              {result.note && (
+                <div style={{ 
+                  padding: '1rem', 
+                  borderRadius: '8px', 
+                  background: 'rgba(239, 68, 68, 0.1)', 
+                  border: '1px solid rgba(239, 68, 68, 0.2)', 
+                  color: '#ef4444', 
+                  fontSize: '0.85rem',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  gap: '0.5rem',
+                  alignItems: 'flex-start'
+                }}>
+                  <ShieldAlert size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong>System Note:</strong><br/>
+                    {result.note}
+                  </div>
+                </div>
+              )}
+
               {result.errors.length === 0 ? (
                 <div style={{ color: 'var(--accent)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <CheckCircle size={16} />

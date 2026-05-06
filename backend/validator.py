@@ -10,32 +10,41 @@ def log_error(error_msg: str):
 def validate_schema(config: dict):
     errors = []
     
-    db_tables = {t['name'] for t in config['dbSchema']['tables']}
-    api_endpoints = {e['path'] for e in config['apiSchema']['endpoints']}
-    auth_roles = set(config['authSchema']['roles'])
+    # Safely get schemas with defaults to prevent KeyErrors
+    db_schema = config.get('dbSchema', {})
+    api_schema = config.get('apiSchema', {})
+    ui_schema = config.get('uiSchema', {})
+    auth_schema = config.get('authSchema', {})
+
+    db_tables = {t.get('name') for t in db_schema.get('tables', []) if t.get('name')}
+    api_endpoints = {e.get('path') for e in api_schema.get('endpoints', []) if e.get('path')}
+    auth_roles = set(auth_schema.get('roles', []))
 
     # 1. Check if API roles exist in Auth Schema
-    for endpoint in config['apiSchema']['endpoints']:
-        for role in endpoint['roles']:
+    for endpoint in api_schema.get('endpoints', []):
+        path = endpoint.get('path', 'unknown')
+        for role in endpoint.get('roles', []):
             if role not in auth_roles:
-                msg = f"API endpoint {endpoint['path']} references undefined role: {role}"
+                msg = f"API endpoint {path} references undefined role: {role}"
                 errors.append(msg)
                 log_error(msg)
 
     # 2. Check if UI components call existing API endpoints
-    for page in config['uiSchema']['pages']:
-        for comp in page['components']:
+    for page in ui_schema.get('pages', []):
+        route = page.get('route', 'unknown')
+        for comp in page.get('components', []):
             if 'dataBinding' in comp and 'apiEndpoint' in comp['dataBinding']:
                 endpoint = comp['dataBinding']['apiEndpoint']
                 if endpoint and endpoint not in api_endpoints:
-                    msg = f"UI Component {comp['id']} in {page['route']} references undefined API: {endpoint}"
+                    msg = f"UI Component {comp.get('id', 'unknown')} in {route} references undefined API: {endpoint}"
                     errors.append(msg)
                     log_error(msg)
 
     # 3. Check if Auth Rules refer to valid roles
-    for rule in config['authSchema']['rules']:
-        if rule['role'] not in auth_roles:
-            msg = f"Auth rule defined for undefined role: {rule['role']}"
+    for rule in auth_schema.get('rules', []):
+        role = rule.get('role')
+        if role and role not in auth_roles:
+            msg = f"Auth rule defined for undefined role: {role}"
             errors.append(msg)
             log_error(msg)
 

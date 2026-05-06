@@ -5,3 +5,5 @@ google-generativeai
 python-dotenv
 pytest
 httpx
+groq
+anthropic
