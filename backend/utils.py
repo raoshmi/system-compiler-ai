@@ -21,16 +21,22 @@ def get_llm_response(prompt: str, model_name: str = "llama-3.3-70b-versatile") -
     gemini_key = os.getenv("GEMINI_API_KEY")
     groq_key = os.getenv("GROQ_API_KEY")
 
-    # Priority 1: Gemini
-    if gemini_key:
-        print("DEBUG: Gemini Key Detected! Using Gemini...")
+    print(f"DEBUG: Checking Keys... Gemini: {'FOUND' if gemini_key else 'MISSING'}, Groq: {'FOUND' if groq_key else 'MISSING'}")
+
+    # Priority 1: Gemini (FORCE priority if key exists)
+    if gemini_key and len(gemini_key) > 10:
+        print("DEBUG: Using Gemini AI...")
         try:
             genai.configure(api_key=gemini_key)
             model = genai.GenerativeModel("gemini-1.5-flash")
             response = model.generate_content(prompt)
-            return response.text
+            if response and response.text:
+                return response.text
+            else:
+                raise Exception("Empty Gemini response")
         except Exception as e:
             print(f"ERROR: Gemini failed - {str(e)}")
+            # Fallback to Groq only if Gemini fails
 
     # Priority 2: Groq
     if groq_client:
