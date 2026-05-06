@@ -14,26 +14,40 @@ groq_client = None
 if groq_key:
     groq_client = Groq(api_key=groq_key)
 
-def get_llm_response(prompt: str, model_name: str = "llama-3.3-70b-versatile") -> str:
-    if not groq_client:
-        raise Exception("GROQ_API_KEY is missing in .env file.")
+import google.generativeai as genai
+# Configure Gemini as fallback
+api_key = os.getenv("GEMINI_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
+
+def get_llm_response(prompt: str, model_name: str = "llama-3.1-8b-instant") -> str:
+    # Priority 1: Groq
+    if groq_client:
+        print(f"DEBUG: Calling Groq AI ({model_name})...")
+        try:
+            chat_completion = groq_client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "You are an expert app architect. Always return valid, compact JSON. Do not include conversational text."},
+                    {"role": "user", "content": prompt}
+                ],
+                model=model_name,
+                temperature=0.1,
+                max_tokens=8192, 
+            )
+            return chat_completion.choices[0].message.content
+        except Exception as e:
+            print(f"ERROR: Groq API failed - {str(e)}")
+            if not api_key: raise e
+            print("INFO: Falling back to Gemini...")
     
-    print(f"DEBUG: Calling Groq AI ({model_name})...")
-    try:
-        # Increase max_tokens to prevent truncation
-        chat_completion = groq_client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": "You are an expert app architect. Always return valid, compact JSON. Do not include conversational text."},
-                {"role": "user", "content": prompt}
-            ],
-            model=model_name,
-            temperature=0.1,
-            max_tokens=8192, 
-        )
-        return chat_completion.choices[0].message.content
-    except Exception as e:
-        print(f"ERROR: Groq API failed - {str(e)}")
-        raise e
+    # Priority 2: Gemini Fallback
+    if api_key:
+        print("DEBUG: Using Gemini Fallback...")
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(prompt)
+        return response.text
+    
+    raise Exception("No working AI API Key found.")
 
 def parse_json(text: str) -> dict:
     # Aggressive cleaning
