@@ -17,26 +17,30 @@ if groq_key:
 import google.generativeai as genai
 # Configure Gemini as fallback
 def get_llm_response(prompt: str, model_name: str = "llama-3.3-70b-versatile") -> str:
-    # Dynamically get keys
+    # Explicitly scan environment for debugging
+    all_keys = os.environ.keys()
     gemini_key = os.getenv("GEMINI_API_KEY")
     groq_key = os.getenv("GROQ_API_KEY")
+    
+    print(f"--- [ENV SCAN START] ---")
+    print(f"GEMINI_API_KEY: {'[PRESENT]' if 'GEMINI_API_KEY' in all_keys else '[MISSING]'}")
+    print(f"GROQ_API_KEY: {'[PRESENT]' if 'GROQ_API_KEY' in all_keys else '[MISSING]'}")
+    print(f"--- [ENV SCAN END] ---")
 
-    print(f"DEBUG: Checking Keys... Gemini: {'FOUND' if gemini_key else 'MISSING'}, Groq: {'FOUND' if groq_key else 'MISSING'}")
-
-    # Priority 1: Gemini (FORCE priority if key exists)
-    if gemini_key and len(gemini_key) > 10:
-        print("DEBUG: Using Gemini AI...")
+    # Priority 1: Gemini (FORCE it if key exists)
+    if gemini_key and len(gemini_key.strip()) > 10:
+        print(f"DEBUG: Using Gemini Flash (Priority 1)...")
         try:
-            genai.configure(api_key=gemini_key)
+            genai.configure(api_key=gemini_key.strip())
             model = genai.GenerativeModel("gemini-1.5-flash")
             response = model.generate_content(prompt)
             if response and response.text:
                 return response.text
             else:
-                raise Exception("Empty Gemini response")
+                raise Exception("Gemini returned empty text")
         except Exception as e:
-            print(f"ERROR: Gemini failed - {str(e)}")
-            # Fallback to Groq only if Gemini fails
+            print(f"ERROR: Gemini Priority Call Failed: {str(e)}")
+            # If Gemini fails, proceed to Groq
 
     # Priority 2: Groq
     if groq_client:
