@@ -46,6 +46,7 @@ export default function Home() {
   const [chatLoading, setChatLoading] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<any>(null);
   const [codeLoading, setCodeLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const handleChat = async () => {
     if (!chatInput || !result) return;
@@ -86,18 +87,26 @@ export default function Home() {
     if (savedHistory) setHistory(JSON.parse(savedHistory));
     
     const savedTheme = localStorage.getItem("appforge_theme");
-    if (savedTheme === "light") setIsDarkMode(false);
+    if (savedTheme === "light") {
+      setIsDarkMode(false);
+      document.body.classList.add("light-theme");
+    }
   }, []);
 
   const toggleTheme = () => {
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
     localStorage.setItem("appforge_theme", newTheme ? "dark" : "light");
+    if (newTheme) {
+      document.body.classList.remove("light-theme");
+    } else {
+      document.body.classList.add("light-theme");
+    }
   };
 
-  const saveToHistory = (data: any, promptText: str) => {
+  const saveToHistory = (data: any, promptText: string) => {
     const newItem = { id: Date.now(), prompt: promptText, result: data, timestamp: new Date().toISOString() };
-    const newHistory = [newItem, ...history].slice(0, 10); // Keep last 10
+    const newHistory = [newItem, ...history].slice(0, 10);
     setHistory(newHistory);
     localStorage.setItem("appforge_history", JSON.stringify(newHistory));
   };
@@ -190,8 +199,9 @@ export default function Home() {
         borderRight: '1px solid var(--border)',
         padding: '2rem',
         zIndex: 100,
-        transform: history.length > 0 ? 'translateX(0)' : 'translateX(-100%)',
-        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+        transform: (history.length > 0 && showHistory) ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: showHistory ? '20px 0 50px rgba(0,0,0,0.5)' : 'none'
       }}>
         <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <HistoryIcon size={20} color="var(--primary)" />
@@ -248,6 +258,9 @@ export default function Home() {
       <header className="header">
         <h1 className="title">APPFORGE.AI</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button onClick={() => setShowHistory(!showHistory)} className="btn" style={{ padding: '0.5rem', background: history.length > 0 ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: showHistory ? 'var(--primary)' : 'inherit' }}>
+            <HistoryIcon size={18} />
+          </button>
           <button onClick={toggleTheme} className="btn" style={{ padding: '0.5rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }}>
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
@@ -326,7 +339,7 @@ export default function Home() {
             
             <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', marginBottom: '1.5rem' }}>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
-                {Math.max(0, 100 - (result.repairCount * 10) - (result.errors.length * 5))}%
+                {result.score !== undefined ? result.score : Math.max(0, 100 - (result.repairCount * 10) - (result.errors.length * 5))}%
               </div>
               <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '0.25rem' }}>Quality Score</div>
             </div>
@@ -420,6 +433,21 @@ export default function Home() {
                   Source Code
                 </button>
               )}
+              <div style={{ marginLeft: 'auto' }}>
+                <button 
+                  className="btn" 
+                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                  onClick={() => {
+                    const content = activeTab === 'code' 
+                      ? `${generatedCode.reactCode}\n\n${generatedCode.apiCode}\n\n${generatedCode.dbCode}`
+                      : JSON.stringify(activeTab === 'db' ? result.data.dbSchema : activeTab === 'api' ? result.data.apiSchema : activeTab === 'ui' ? result.data.uiSchema : result.data.authSchema, null, 2);
+                    navigator.clipboard.writeText(content);
+                    alert("Copied to clipboard!");
+                  }}
+                >
+                  Copy
+                </button>
+              </div>
             </div>
 
             <AnimatePresence mode="wait">

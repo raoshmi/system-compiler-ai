@@ -61,14 +61,24 @@ async def generate_app(request: PromptRequest):
             errors = validate_schema(config)
             print("DEBUG: Repair completed.")
 
+        # Calculate quality score
+        completeness_score = 100
+        # Check if all major schemas are present
+        for schema_name in ["dbSchema", "apiSchema", "uiSchema", "authSchema"]:
+            if schema_name not in config or not config[schema_name]:
+                completeness_score -= 20
+        
+        score = max(0, completeness_score - (repair_count * 10) - (len(errors) * 5))
+
         end_time = time.time()
-        print(f"DEBUG: Generation complete in {end_time - start_time:.2f}s")
+        print(f"DEBUG: Generation complete in {end_time - start_time:.2f}s | Score: {score}")
         
         return {
             "success": True,
             "latency": end_time - start_time,
             "repairCount": repair_count,
             "errors": errors,
+            "score": score,
             "data": config,
             "stages": {
                 "intent": intent,

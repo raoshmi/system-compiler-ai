@@ -8,6 +8,9 @@
   --border: rgba(255, 255, 255, 0.1);
   --glass: rgba(10, 10, 12, 0.7);
   --sidebar: rgba(0, 0, 0, 0.4);
+  --bg-gradient-start: #1e1e2e;
+  --bg-gradient-end: #0a0a0c;
+  --glow-color: rgba(99, 102, 241, 0.15);
 }
 
 .light-theme {
@@ -20,6 +23,9 @@
   --border: rgba(0, 0, 0, 0.1);
   --glass: rgba(255, 255, 255, 0.8);
   --sidebar: rgba(255, 255, 255, 0.9);
+  --bg-gradient-start: #e2e8f0;
+  --bg-gradient-end: #f8fafc;
+  --glow-color: rgba(79, 70, 229, 0.1);
 }
 
 * {
@@ -34,6 +40,7 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Background Animation */
@@ -43,19 +50,21 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at 50% 50%, #1e1e2e 0%, #0a0a0c 100%);
+  background: radial-gradient(circle at 50% 50%, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
   z-index: -1;
+  transition: background 0.3s ease;
 }
 
 .bg-glow {
   position: fixed;
   width: 40vw;
   height: 40vw;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--glow-color) 0%, transparent 70%);
   border-radius: 50%;
   filter: blur(80px);
   z-index: -1;
   pointer-events: none;
+  transition: background 0.3s ease;
 }
 
 /* Layout */

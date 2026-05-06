@@ -1,21 +1,23 @@
 from utils import get_llm_response, parse_json
 
 PROMPT = """
-Convert the following application schemas into production-ready code.
-You must provide:
-1. React (Next.js) Components for the UI Schema.
-2. FastAPI Route Handlers for the API Schema.
-3. SQL (PostgreSQL) Migration Script for the DB Schema.
+You are an expert full-stack developer. Convert the following application schemas into production-ready, high-quality code.
+The code should be modern, clean, and follow best practices.
+
+Required Components:
+1. React (Next.js 15) Component: Use Tailwind CSS for styling, Lucide icons, and Framer Motion for animations. Ensure it's a "use client" component.
+2. FastAPI Route Handlers: Use Pydantic models for request/response validation, follow RESTful patterns, and include proper error handling.
+3. SQL (PostgreSQL) Migration Script: Include table definitions with proper constraints (PK, FK, NOT NULL), indexes for performance, and initial seed data if relevant.
 
 Schemas:
 {schemas}
 
-Output Format:
-{{
+Output must be a VALID JSON object with exactly these keys:
+{
   "reactCode": "string (The complete Next.js page code)",
   "apiCode": "string (The FastAPI routes)",
   "dbCode": "string (The SQL migrations)"
-}}
+}
 """
 
 def generate_full_code(schemas: dict):
