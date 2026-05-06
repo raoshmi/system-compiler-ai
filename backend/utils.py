@@ -20,32 +20,35 @@ api_key = os.getenv("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 
-def get_llm_response(prompt: str, model_name: str = "llama-3.1-8b-instant") -> str:
-    # Priority 1: Groq
+def get_llm_response(prompt: str, model_name: str = "llama-3-3-70b-versatile") -> str:
+    # Priority 1: Gemini (Best for Large Context)
+    if api_key:
+        print("DEBUG: Using Gemini (High Capacity)...")
+        try:
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            print(f"ERROR: Gemini failed - {str(e)}")
+
+    # Priority 2: Groq 70b (Higher TPM than 8b)
     if groq_client:
-        print(f"DEBUG: Calling Groq AI ({model_name})...")
+        model = "llama-3.3-70b-versatile"
+        print(f"DEBUG: Calling Groq AI ({model})...")
         try:
             chat_completion = groq_client.chat.completions.create(
                 messages=[
-                    {"role": "system", "content": "You are an expert app architect. Always return valid, compact JSON. Do not include conversational text."},
+                    {"role": "system", "content": "Expert architect. Return ONLY compact JSON. No talk."},
                     {"role": "user", "content": prompt}
                 ],
-                model=model_name,
+                model=model,
                 temperature=0.1,
-                max_tokens=8192, 
+                max_tokens=4096, 
             )
             return chat_completion.choices[0].message.content
         except Exception as e:
-            print(f"ERROR: Groq API failed - {str(e)}")
-            if not api_key: raise e
-            print("INFO: Falling back to Gemini...")
-    
-    # Priority 2: Gemini Fallback
-    if api_key:
-        print("DEBUG: Using Gemini Fallback...")
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(prompt)
-        return response.text
+            print(f"ERROR: Groq failed - {str(e)}")
+            raise e
     
     raise Exception("No working AI API Key found.")
 
