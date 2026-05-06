@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  Send, 
-  Database, 
-  Cpu, 
-  Layout, 
-  Lock, 
-  CheckCircle, 
-  AlertCircle, 
+import {
+  Send,
+  Database,
+  Cpu,
+  Layout,
+  Lock,
+  CheckCircle,
+  AlertCircle,
   RefreshCw,
   Activity,
   Zap,
@@ -39,7 +39,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("db");
   const [result, setResult] = useState<any>(null);
-  const [stage, setStage] = useState(0); 
+  const [stage, setStage] = useState(0);
   const [history, setHistory] = useState<any[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [chatInput, setChatInput] = useState("");
@@ -52,9 +52,9 @@ export default function Home() {
     if (!chatInput || !result) return;
     setChatLoading(true);
     try {
-      const response = await axios.post(`${BACKEND_URL}/refine`, { 
-        config: result.data, 
-        instruction: chatInput 
+      const response = await axios.post(`${BACKEND_URL}/refine`, {
+        config: result.data,
+        instruction: chatInput
       });
       setResult({ ...result, data: response.data.data });
       setChatInput("");
@@ -69,8 +69,8 @@ export default function Home() {
     if (!result) return;
     setCodeLoading(true);
     try {
-      const response = await axios.post(`${BACKEND_URL}/generate-code`, { 
-        schemas: result.data 
+      const response = await axios.post(`${BACKEND_URL}/generate-code`, {
+        schemas: result.data
       });
       setGeneratedCode(response.data.data);
       setActiveTab("code");
@@ -85,7 +85,7 @@ export default function Home() {
   useEffect(() => {
     const savedHistory = localStorage.getItem("appforge_history");
     if (savedHistory) setHistory(JSON.parse(savedHistory));
-    
+
     const savedTheme = localStorage.getItem("appforge_theme");
     if (savedTheme === "light") {
       setIsDarkMode(false);
@@ -121,10 +121,10 @@ export default function Home() {
 
   const handleExport = (format: 'json' | 'yaml') => {
     if (!result) return;
-    const content = format === 'json' 
+    const content = format === 'json'
       ? JSON.stringify(result.data, null, 2)
       : yaml.dump(result.data);
-    
+
     const blob = new Blob([content], { type: format === 'json' ? 'application/json' : 'text/yaml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -137,20 +137,20 @@ export default function Home() {
   const handleDownloadZip = async () => {
     if (!result) return;
     const zip = new JSZip();
-    
+
     // Add schemas
     zip.file("schemas/db.json", JSON.stringify(result.data.dbSchema, null, 2));
     zip.file("schemas/api.json", JSON.stringify(result.data.apiSchema, null, 2));
     zip.file("schemas/ui.json", JSON.stringify(result.data.uiSchema, null, 2));
     zip.file("schemas/auth.json", JSON.stringify(result.data.authSchema, null, 2));
-    
+
     // Add code if generated
     if (generatedCode) {
       zip.file("code/page.tsx", generatedCode.reactCode);
       zip.file("code/main.py", generatedCode.apiCode);
       zip.file("code/migration.sql", generatedCode.dbCode);
     }
-    
+
     const content = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(content);
     const a = document.createElement('a');
@@ -165,6 +165,7 @@ export default function Home() {
     setLoading(true);
     setResult(null);
     setStage(1);
+    console.log("DEBUG: Calling Backend at:", BACKEND_URL);
 
     try {
       // Simulate stage progression for UI feel
@@ -172,7 +173,7 @@ export default function Home() {
       setTimeout(() => setStage(3), 4000);
 
       const response = await axios.post(`${BACKEND_URL}/generate`, { prompt });
-      
+
       setResult(response.data);
       saveToHistory(response.data, prompt);
       setStage(4);
@@ -188,14 +189,14 @@ export default function Home() {
   return (
     <main className={`container ${isDarkMode ? '' : 'light-theme'}`}>
       {/* Sidebar for History */}
-      <div style={{ 
-        position: 'fixed', 
-        left: 0, 
-        top: 0, 
-        bottom: 0, 
-        width: '300px', 
-        background: 'var(--sidebar)', 
-        backdropFilter: 'blur(20px)', 
+      <div style={{
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: '300px',
+        background: 'var(--sidebar)',
+        backdropFilter: 'blur(20px)',
         borderRight: '1px solid var(--border)',
         padding: '2rem',
         zIndex: 100,
@@ -209,18 +210,18 @@ export default function Home() {
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {history.map((item) => (
-            <button 
-              key={item.id} 
+            <button
+              key={item.id}
               onClick={() => {
                 setResult(item.result);
                 setPrompt(item.prompt);
                 setStage(4);
               }}
-              style={{ 
-                textAlign: 'left', 
-                padding: '1rem', 
-                borderRadius: '8px', 
-                background: 'rgba(255,255,255,0.05)', 
+              style={{
+                textAlign: 'left',
+                padding: '1rem',
+                borderRadius: '8px',
+                background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.05)',
                 color: 'white',
                 fontSize: '0.8rem',
@@ -236,12 +237,12 @@ export default function Home() {
             </button>
           ))}
           {history.length > 0 && (
-            <button 
+            <button
               onClick={() => {
                 setHistory([]);
                 localStorage.removeItem("appforge_history");
               }}
-              className="btn" 
+              className="btn"
               style={{ marginTop: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444' }}
             >
               <Trash2 size={14} style={{ marginRight: '6px' }} />
@@ -264,7 +265,7 @@ export default function Home() {
           <button onClick={toggleTheme} className="btn" style={{ padding: '0.5rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }}>
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
-          
+
           <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }} />
 
           <div className={`step ${stage >= 1 ? 'active' : ''} ${stage > 1 ? 'completed' : ''}`}>
@@ -285,9 +286,9 @@ export default function Home() {
       <section className="prompt-section">
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
           {TEMPLATES.map((t) => (
-            <button 
+            <button
               key={t.name}
-              className="btn" 
+              className="btn"
               style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
               onClick={() => setPrompt(t.prompt)}
             >
@@ -296,15 +297,15 @@ export default function Home() {
           ))}
         </div>
         <div className="card">
-          <textarea 
+          <textarea
             placeholder="e.g. Build a CRM with login, contacts, dashboard, role-based access, and premium plan with payments. Admins can see analytics."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             disabled={loading}
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
-            <button 
-              className="btn" 
+            <button
+              className="btn"
               onClick={handleGenerate}
               disabled={loading || !prompt}
             >
@@ -325,7 +326,7 @@ export default function Home() {
       </section>
 
       {result && (
-        <motion.div 
+        <motion.div
           className="main-grid"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -336,7 +337,7 @@ export default function Home() {
               <Activity size={20} color="var(--primary)" />
               Compiler Metrics
             </h3>
-            
+
             <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', marginBottom: '1.5rem' }}>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
                 {result.score !== undefined ? result.score : Math.max(0, 100 - (result.repairCount * 10) - (result.errors.length * 5))}%
@@ -359,14 +360,14 @@ export default function Home() {
 
             <div style={{ marginTop: '2rem' }}>
               <h4 style={{ marginBottom: '1rem' }}>Validation Log</h4>
-              
+
               {result.note && (
-                <div style={{ 
-                  padding: '1rem', 
-                  borderRadius: '8px', 
-                  background: 'rgba(239, 68, 68, 0.1)', 
-                  border: '1px solid rgba(239, 68, 68, 0.2)', 
-                  color: '#ef4444', 
+                <div style={{
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  color: '#ef4444',
                   fontSize: '0.85rem',
                   marginBottom: '1rem',
                   display: 'flex',
@@ -375,7 +376,7 @@ export default function Home() {
                 }}>
                   <ShieldAlert size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
                   <div>
-                    <strong>System Note:</strong><br/>
+                    <strong>System Note:</strong><br />
                     {result.note}
                   </div>
                 </div>
@@ -397,7 +398,7 @@ export default function Home() {
                 </ul>
               )}
             </div>
-            
+
             <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button onClick={() => handleExport('json')} className="btn" style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)' }}>
@@ -409,7 +410,7 @@ export default function Home() {
                   YAML
                 </button>
               </div>
-              
+
               <button onClick={handleGenerateCode} className="btn" style={{ fontSize: '0.85rem', padding: '0.75rem', background: 'var(--primary)' }}>
                 {codeLoading ? <RefreshCw className="spin" size={16} /> : <Zap size={16} />}
                 {codeLoading ? " Coding..." : " Generate Full Source Code"}
@@ -429,7 +430,7 @@ export default function Home() {
                 Refine with Chat
               </h4>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input 
+                <input
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="e.g. add payments, remove auth..."
@@ -456,11 +457,11 @@ export default function Home() {
                 </button>
               )}
               <div style={{ marginLeft: 'auto' }}>
-                <button 
-                  className="btn" 
+                <button
+                  className="btn"
                   style={{ padding: '0.4rem 0.8rem', fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
                   onClick={() => {
-                    const content = activeTab === 'code' 
+                    const content = activeTab === 'code'
                       ? `${generatedCode.reactCode}\n\n${generatedCode.apiCode}\n\n${generatedCode.dbCode}`
                       : JSON.stringify(activeTab === 'db' ? result.data.dbSchema : activeTab === 'api' ? result.data.apiSchema : activeTab === 'ui' ? result.data.uiSchema : result.data.authSchema, null, 2);
                     navigator.clipboard.writeText(content);
@@ -493,9 +494,9 @@ export default function Home() {
                   ) : (
                     JSON.stringify(
                       activeTab === 'db' ? result.data.dbSchema :
-                      activeTab === 'api' ? result.data.apiSchema :
-                      activeTab === 'ui' ? result.data.uiSchema :
-                      result.data.authSchema, 
+                        activeTab === 'api' ? result.data.apiSchema :
+                          activeTab === 'ui' ? result.data.uiSchema :
+                            result.data.authSchema,
                       null, 2
                     )
                   )}
