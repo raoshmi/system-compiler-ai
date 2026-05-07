@@ -79,6 +79,7 @@ async def generate_app(request: PromptRequest):
             "success": True,
             "latency": latency,
             "repairCount": repair_count,
+            "errors": errors,
             "data": config
         }
         
@@ -98,6 +99,7 @@ async def generate_app(request: PromptRequest):
             "success": False,
             "error": str(e),
             "key_status": status,
+            "errors": [f"System Error: {str(e)}"],
             "data": mock_data
         }
 
