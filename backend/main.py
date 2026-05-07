@@ -84,7 +84,11 @@ async def generate_app(request: PromptRequest):
         }
         
     except Exception as e:
-        print(f"ERROR in Pipeline: {str(e)}")
+        print(f"DEBUG: Aggressive JSON Parse Error: {e}")
+        # Attach raw content to the exception for debugging
+        error = Exception("Failed to parse AI response.")
+        error.raw_content = getattr(e, 'raw_content', 'Unavailable')
+        
         # Provide a smart mock with error details
         mock_data = get_dynamic_mock(request.prompt)
         
@@ -103,6 +107,7 @@ async def generate_app(request: PromptRequest):
             "repairCount": 0,
             "key_status": status,
             "errors": [f"System Error: {str(e)}"],
+            "raw_response": getattr(e, 'raw_content', 'Unavailable'),
             "data": mock_data
         }
 
