@@ -25,7 +25,7 @@ import JSZip from "jszip";
 import yaml from "js-yaml";
 import { Download, FileJson, FileCode } from "lucide-react";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 type AppConfig = {
   dbSchema: any;
