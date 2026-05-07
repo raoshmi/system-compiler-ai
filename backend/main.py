@@ -84,10 +84,11 @@ async def generate_app(request: PromptRequest):
         }
         
     except Exception as e:
-        print(f"DEBUG: Aggressive JSON Parse Error: {e}")
-        # Attach raw content to the exception for debugging
-        error = Exception("Failed to parse AI response.")
-        error.raw_content = getattr(e, 'raw_content', 'Unavailable')
+        error_msg = str(e)
+        print(f"ERROR in Pipeline: {error_msg}")
+        
+        # Determine if it's a parse error or provider error
+        is_parse_error = "parse" in error_msg.lower()
         
         # Provide a smart mock with error details
         mock_data = get_dynamic_mock(request.prompt)
@@ -102,12 +103,12 @@ async def generate_app(request: PromptRequest):
         latency = round(time.time() - start_time, 2)
         return {
             "success": False,
-            "error": str(e),
+            "error": error_msg,
             "latency": latency,
             "repairCount": 0,
             "key_status": status,
-            "errors": [f"System Error: {str(e)}"],
-            "raw_response": getattr(e, 'raw_content', 'Unavailable'),
+            "errors": [f"System Error: {error_msg}"],
+            "raw_response": getattr(e, 'raw_content', 'Unavailable' if is_parse_error else 'N/A'),
             "data": mock_data
         }
 
