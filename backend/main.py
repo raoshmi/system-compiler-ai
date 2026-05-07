@@ -95,9 +95,12 @@ async def generate_app(request: PromptRequest):
             "OPENROUTER": "SET" if os.getenv("OPENROUTER_API_KEY") else "MISSING"
         }
         
+        latency = round(time.time() - start_time, 2)
         return {
             "success": False,
             "error": str(e),
+            "latency": latency,
+            "repairCount": 0,
             "key_status": status,
             "errors": [f"System Error: {str(e)}"],
             "data": mock_data
