@@ -83,9 +83,18 @@ def get_llm_response(prompt: str) -> str:
     raise Exception("All AI providers (Gemini, OpenRouter, Groq) failed.")
 
 def fix_truncated_json(json_str: str) -> str:
-    """Attempt to fix truncated JSON by closing open braces/brackets."""
+    """Attempt to fix truncated JSON by closing open strings, then braces/brackets."""
+    # 1. Fix unterminated string if necessary
+    # Count quotes to see if we're inside a string
+    quotes = json_str.count('"')
+    # If odd number of quotes and it doesn't end with a quote
+    if quotes % 2 != 0:
+        json_str += '"'
+    
+    # 2. Close open braces/brackets
     stack = []
-    for i, char in enumerate(json_str):
+    # Re-scan for balance after potential string fix
+    for char in json_str:
         if char == '{':
             stack.append('}')
         elif char == '[':
@@ -104,33 +113,30 @@ def parse_json(text: str) -> dict:
         if start == -1:
             raise Exception("No JSON block found.")
         
-        # Find last '}' - if not found or truncated, we'll try to fix it
-        end = text.rfind('}')
+        # Clean text first to remove markdown markers before processing
+        text_clean = text[start:].strip()
+        if text_clean.endswith('```'):
+            text_clean = text_clean[:-3].strip()
+            
+        # Find last '}'
+        end = text_clean.rfind('}')
         
-        if end < start:
-            # Likely truncated
-            json_str = fix_truncated_json(text[start:])
+        if end == -1 or end < (len(text_clean) - 5): # Heuristic for truncation
+            json_str = fix_truncated_json(text_clean)
         else:
-            json_str = text[start:end+1]
+            json_str = text_clean[:end+1]
         
         # Aggressive cleaning
         json_str = re.sub(r',\s*([\]}])', r'\1', json_str)
-        json_str = "".join(ch for ch in json_str if unicodedata.category(ch)[0] != "C" or ch in "\n\r\t")
         
         try:
             return json.loads(json_str)
         except json.JSONDecodeError:
-            # Try fixing truncation and then parsing
-            try:
-                fixed = fix_truncated_json(json_str)
-                return json.loads(fixed)
-            except:
-                # Last ditch: fix unquoted keys
-                json_str = re.sub(r'(\w+):', r'"\1":', json_str)
-                return json.loads(json_str)
+            fixed = fix_truncated_json(json_str)
+            return json.loads(fixed)
             
     except Exception as e:
-        print(f"DEBUG: Parse Error: {e}")
+        print(f"DEBUG: Final Repair Error: {e}")
         err = Exception(f"JSON Parse Failed: {str(e)}")
         err.raw_content = text[:1000]
         raise err
