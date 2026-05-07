@@ -29,6 +29,8 @@ Output Format (Strict JSON):
     "rules": [{{ "role": "string", "permissions": ["string"] }}]
   }}
 }}
+
+CRITICAL CONSTRAINT: Every "apiEndpoint" referenced in the "uiSchema" MUST exist as a "path" in the "apiSchema".
 """
 
 def generate_schema(architecture: dict):

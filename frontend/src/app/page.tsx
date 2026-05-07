@@ -42,28 +42,9 @@ export default function Home() {
   const [stage, setStage] = useState(0);
   const [history, setHistory] = useState<any[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [chatInput, setChatInput] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<any>(null);
   const [codeLoading, setCodeLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-
-  const handleChat = async () => {
-    if (!chatInput || !result) return;
-    setChatLoading(true);
-    try {
-      const response = await axios.post(`${BACKEND_URL}/refine`, {
-        config: result.data,
-        instruction: chatInput
-      });
-      setResult({ ...result, data: response.data.data });
-      setChatInput("");
-    } catch (error) {
-      console.error("Refinement failed", error);
-    } finally {
-      setChatLoading(false);
-    }
-  };
 
   const handleGenerateCode = async () => {
     if (!result) return;
@@ -112,7 +93,7 @@ export default function Home() {
   };
 
   const TEMPLATES = [
-    { name: "E-commerce", prompt: "Build an e-commerce store with product catalog, cart, payments, and admin inventory management." },
+    { name: "E-commerce", prompt: "Build an e-commerce store with product catalog, cart, and admin inventory management." },
     { name: "CRM", prompt: "Build a CRM with contacts, leads, and a dashboard. Only managers can see the 'Deals' page." },
     { name: "SaaS", prompt: "Build a SaaS platform with user subscription plans, project management, and team collaboration." },
     { name: "Blog", prompt: "Build a tech blog with markdown support, comments, and role-based access for editors." },
@@ -177,6 +158,22 @@ export default function Home() {
       setResult(response.data);
       saveToHistory(response.data, prompt);
       setStage(4);
+      
+      // Auto-trigger full code generation for better UX
+      if (response.data && response.data.data) {
+        setCodeLoading(true);
+        try {
+          const codeResponse = await axios.post(`${BACKEND_URL}/generate-code`, {
+            schemas: response.data.data
+          });
+          setGeneratedCode(codeResponse.data.data);
+          setActiveTab("code");
+        } catch (e) {
+          console.error("Auto-code gen failed", e);
+        } finally {
+          setCodeLoading(false);
+        }
+      }
     } catch (error) {
       console.error("Generation failed", error);
       alert("Error generating app. Make sure the backend is running.");
@@ -298,7 +295,7 @@ export default function Home() {
         </div>
         <div className="card">
           <textarea
-            placeholder="e.g. Build a CRM with login, contacts, dashboard, role-based access, and premium plan with payments. Admins can see analytics."
+            placeholder="e.g. Build a CRM with login, contacts, dashboard, role-based access. Admins can see analytics."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             disabled={loading}
@@ -435,23 +432,6 @@ export default function Home() {
               )}
             </div>
 
-            <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '2rem' }}>
-              <h4 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Send size={16} color="var(--primary)" />
-                Refine with Chat
-              </h4>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="e.g. add payments, remove auth..."
-                  style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.5rem 1rem', borderRadius: '8px', color: 'white', fontSize: '0.8rem' }}
-                />
-                <button onClick={handleChat} disabled={chatLoading} className="btn" style={{ padding: '0.5rem 1rem' }}>
-                  {chatLoading ? <RefreshCw className="spin" size={14} /> : "Update"}
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* Code Viewer */}
@@ -486,20 +466,25 @@ export default function Home() {
 
             <AnimatePresence mode="wait">
               <motion.div key={activeTab} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
-                <pre style={{ maxHeight: '600px', overflowY: 'auto' }}>
-                  {activeTab === 'code' ? (
+                <pre style={{ maxHeight: '600px', overflowY: 'auto', color: 'var(--foreground)' }}>
+                  {codeLoading ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', gap: '1rem', color: 'rgba(255,255,255,0.4)' }}>
+                      <RefreshCw className="spin" size={32} />
+                      <p>Synthesizing Full Source Code...</p>
+                    </div>
+                  ) : activeTab === 'code' && generatedCode ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                       <div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>// NEXT.JS COMPONENT</div>
-                        {generatedCode.reactCode}
+                        <div style={{ fontSize: '0.7rem', color: 'var(--primary)', marginBottom: '0.5rem', fontWeight: 'bold' }}>// NEXT.JS COMPONENT (frontend/page.tsx)</div>
+                        <code style={{ color: '#94a3b8' }}>{generatedCode.reactCode}</code>
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>// FASTAPI ROUTES</div>
-                        {generatedCode.apiCode}
+                        <div style={{ fontSize: '0.7rem', color: 'var(--primary)', marginBottom: '0.5rem', fontWeight: 'bold' }}>// FASTAPI ROUTES (backend/main.py)</div>
+                        <code style={{ color: '#94a3b8' }}>{generatedCode.apiCode}</code>
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>// SQL MIGRATIONS</div>
-                        {generatedCode.dbCode}
+                        <div style={{ fontSize: '0.7rem', color: 'var(--primary)', marginBottom: '0.5rem', fontWeight: 'bold' }}>// SQL MIGRATIONS (database/schema.sql)</div>
+                        <code style={{ color: '#94a3b8' }}>{generatedCode.dbCode}</code>
                       </div>
                     </div>
                   ) : (

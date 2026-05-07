@@ -11,6 +11,7 @@ from intent import extract_intent
 from architect import design_architecture
 from schema import generate_schema
 from validator import validate_schema, repair_schema
+from coder import generate_full_code
 
 app = FastAPI(title="AppForge AI Compiler")
 
@@ -25,6 +26,9 @@ app.add_middleware(
 
 class PromptRequest(BaseModel):
     prompt: str
+
+class CodeGenerationRequest(BaseModel):
+    schemas: dict
 
 @app.get("/")
 async def root():
@@ -69,9 +73,11 @@ async def generate_app(request: PromptRequest):
         # Step 4: Validate and optional Repair
         errors = validate_schema(config)
         repair_count = 0
-        if errors and repair_count < 1:
+        if errors:
             config = repair_schema(config, errors)
             repair_count += 1
+            # Re-validate after repair to ensure errors are cleared in the UI
+            errors = validate_schema(config)
             
         latency = round(time.time() - start_time, 2)
         
@@ -111,6 +117,18 @@ async def generate_app(request: PromptRequest):
             "raw_response": getattr(e, 'raw_content', 'Unavailable' if is_parse_error else 'N/A'),
             "data": mock_data
         }
+
+@app.post("/generate-code")
+async def generate_code(request: CodeGenerationRequest):
+    try:
+        code = generate_full_code(request.schemas)
+        return {
+            "success": True,
+            "data": code
+        }
+    except Exception as e:
+        print(f"ERROR in Code Generation: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

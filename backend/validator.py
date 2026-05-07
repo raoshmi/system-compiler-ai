@@ -51,16 +51,22 @@ def validate_schema(config: dict):
     return errors
 
 SURGICAL_REPAIR_PROMPT = """
-The following application configuration has validation errors. 
-REPAIR ONLY the specific broken sections. DO NOT change the working parts.
+You are a Lead Software Architect. The application configuration below has CRITICAL validation errors that will break the app.
 
-Validation Errors:
+VALIDATION ERRORS:
 {errors}
 
-Original Config:
+TASK:
+1. Fix every single error listed above.
+2. If a UI component references an undefined API, you MUST either add that API endpoint to the apiSchema or update the component to use a valid endpoint.
+3. If an API references an undefined role, you MUST add that role to the authSchema.
+4. Ensure the resulting JSON is perfectly valid and follows the original structure.
+5. KEEP the rest of the configuration exactly as it is.
+
+ORIGINAL CONFIG:
 {config}
 
-Return the COMPLETE fixed configuration in JSON format.
+Return the COMPLETE fixed configuration as a single JSON object.
 """
 
 def repair_schema(config: dict, errors: list):
