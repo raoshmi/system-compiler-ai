@@ -4,6 +4,7 @@ import re
 import google.generativeai as genai
 from groq import Groq
 import httpx
+import unicodedata
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -77,29 +78,29 @@ def get_llm_response(prompt: str) -> str:
 
 def parse_json(text: str) -> dict:
     try:
-        # Try to find the first '{' and the last '}'
+        # Find first '{' and last '}'
         start = text.find('{')
         end = text.rfind('}')
-        
         if start == -1 or end == -1:
-            raise Exception("No JSON object found in response.")
-            
+            raise Exception("No JSON block found.")
+        
         json_str = text[start:end+1]
         
-        # Clean common LLM artifacts
-        json_str = json_str.replace('\\n', '\n').replace('\\"', '\"')
+        # Aggressive cleaning
+        # Remove trailing commas before closing braces/brackets
+        json_str = re.sub(r',\s*([\]}])', r'\1', json_str)
+        # Remove control characters
+        json_str = "".join(ch for ch in json_str if unicodedata.category(ch)[0] != "C" or ch in "\n\r\t")
         
-        # Handle cases where the LLM might have returned a string representation of a dict
         try:
             return json.loads(json_str)
         except json.JSONDecodeError:
-            # Last ditch effort: simple cleanup of control characters
-            json_str = re.sub(r'[\x00-\x1F\x7F]', '', json_str)
+            # Try to fix unquoted keys if necessary (very common with some LLMs)
+            json_str = re.sub(r'(\w+):', r'"\1":', json_str)
             return json.loads(json_str)
             
     except Exception as e:
-        print(f"DEBUG: Aggressive JSON Parse Error: {e}")
-        # Attach raw content to the exception for debugging
-        new_err = Exception("Failed to parse AI response.")
-        new_err.raw_content = text[:500] # Send first 500 chars
-        raise new_err
+        print(f"DEBUG: Parse Error: {e}")
+        err = Exception(f"JSON Parse Failed: {str(e)}")
+        err.raw_content = text[:1000]
+        raise err
