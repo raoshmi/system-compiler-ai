@@ -22,7 +22,13 @@ def get_llm_response(prompt: str) -> str:
             print("DEBUG: Trying Gemini (gemini-1.5-pro)...")
             genai.configure(api_key=gemini_key)
             model = genai.GenerativeModel("gemini-1.5-pro")
-            response = model.generate_content(prompt)
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=8000,
+                    temperature=0.1
+                )
+            )
             if response and response.text:
                 return response.text
         except Exception as e:
@@ -44,10 +50,10 @@ def get_llm_response(prompt: str) -> str:
                     json={
                         "model": "google/gemini-2.0-flash-exp:free",
                         "messages": [{"role": "user", "content": prompt}],
-                        "max_tokens": 4000,
+                        "max_tokens": 8000,
                         "temperature": 0.1
                     },
-                    timeout=60.0
+                    timeout=90.0
                 )
                 if response.status_code == 200:
                     return response.json()["choices"][0]["message"]["content"]
