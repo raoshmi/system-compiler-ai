@@ -82,28 +82,52 @@ def get_llm_response(prompt: str) -> str:
 
     raise Exception("All AI providers (Gemini, OpenRouter, Groq) failed.")
 
+def fix_truncated_json(json_str: str) -> str:
+    """Attempt to fix truncated JSON by closing open braces/brackets."""
+    stack = []
+    for i, char in enumerate(json_str):
+        if char == '{':
+            stack.append('}')
+        elif char == '[':
+            stack.append(']')
+        elif char == '}' or char == ']':
+            if stack and stack[-1] == char:
+                stack.pop()
+    
+    # Append the closing characters in reverse order
+    return json_str + "".join(reversed(stack))
+
 def parse_json(text: str) -> dict:
     try:
-        # Find first '{' and last '}'
+        # Find first '{'
         start = text.find('{')
-        end = text.rfind('}')
-        if start == -1 or end == -1:
+        if start == -1:
             raise Exception("No JSON block found.")
         
-        json_str = text[start:end+1]
+        # Find last '}' - if not found or truncated, we'll try to fix it
+        end = text.rfind('}')
+        
+        if end < start:
+            # Likely truncated
+            json_str = fix_truncated_json(text[start:])
+        else:
+            json_str = text[start:end+1]
         
         # Aggressive cleaning
-        # Remove trailing commas before closing braces/brackets
         json_str = re.sub(r',\s*([\]}])', r'\1', json_str)
-        # Remove control characters
         json_str = "".join(ch for ch in json_str if unicodedata.category(ch)[0] != "C" or ch in "\n\r\t")
         
         try:
             return json.loads(json_str)
         except json.JSONDecodeError:
-            # Try to fix unquoted keys if necessary (very common with some LLMs)
-            json_str = re.sub(r'(\w+):', r'"\1":', json_str)
-            return json.loads(json_str)
+            # Try fixing truncation and then parsing
+            try:
+                fixed = fix_truncated_json(json_str)
+                return json.loads(fixed)
+            except:
+                # Last ditch: fix unquoted keys
+                json_str = re.sub(r'(\w+):', r'"\1":', json_str)
+                return json.loads(json_str)
             
     except Exception as e:
         print(f"DEBUG: Parse Error: {e}")
