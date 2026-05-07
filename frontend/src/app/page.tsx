@@ -388,14 +388,25 @@ export default function Home() {
                   No logical inconsistencies found.
                 </div>
               ) : (
-                <ul style={{ listStyle: 'none', fontSize: '0.85rem' }}>
-                  {result.errors.map((err: string, i: number) => (
-                    <li key={i} style={{ color: '#ef4444', marginBottom: '0.5rem', display: 'flex', gap: '0.5rem' }}>
-                      <AlertCircle size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
-                      {err}
-                    </li>
-                  ))}
-                </ul>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <ul style={{ listStyle: 'none', fontSize: '0.85rem' }}>
+                    {result.errors.map((err: string, i: number) => (
+                      <li key={i} style={{ color: '#ef4444', marginBottom: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+                        <AlertCircle size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
+                        {err}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {result.raw_response && result.raw_response !== 'N/A' && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Raw AI Response (Debug):</div>
+                      <pre style={{ fontSize: '0.7rem', maxHeight: '150px', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.75rem' }}>
+                        {result.raw_response}
+                      </pre>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
