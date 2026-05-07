@@ -99,5 +99,7 @@ def parse_json(text: str) -> dict:
             
     except Exception as e:
         print(f"DEBUG: Aggressive JSON Parse Error: {e}")
-        print(f"DEBUG: Raw content was: {text[:200]}...")
-        raise Exception("Failed to parse AI response.")
+        # Attach raw content to the exception for debugging
+        new_err = Exception("Failed to parse AI response.")
+        new_err.raw_content = text[:500] # Send first 500 chars
+        raise new_err
