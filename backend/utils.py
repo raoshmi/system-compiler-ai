@@ -108,35 +108,39 @@ def fix_truncated_json(json_str: str) -> str:
 
 def parse_json(text: str) -> dict:
     try:
-        # Find first '{'
+        # 1. Find the first '{'
         start = text.find('{')
         if start == -1:
             raise Exception("No JSON block found.")
         
-        # Clean text first to remove markdown markers before processing
-        text_clean = text[start:].strip()
-        if text_clean.endswith('```'):
-            text_clean = text_clean[:-3].strip()
+        json_content = text[start:].strip()
+        if json_content.endswith('```'):
+            json_content = json_content[:-3].strip()
             
-        # Find last '}'
-        end = text_clean.rfind('}')
-        
-        if end == -1 or end < (len(text_clean) - 5): # Heuristic for truncation
-            json_str = fix_truncated_json(text_clean)
-        else:
-            json_str = text_clean[:end+1]
-        
-        # Aggressive cleaning
-        json_str = re.sub(r',\s*([\]}])', r'\1', json_str)
-        
+        # 2. Try raw_decode to handle "Extra Data" gracefully
+        decoder = json.JSONDecoder()
         try:
-            return json.loads(json_str)
-        except json.JSONDecodeError:
-            fixed = fix_truncated_json(json_str)
-            return json.loads(fixed)
+            # Clean characters that break the decoder first
+            clean_str = re.sub(r',\s*([\]}])', r'\1', json_content)
+            result, index = decoder.raw_decode(clean_str)
+            return result
+        except json.JSONDecodeError as e:
+            # If it's a truncation error, try fixing it
+            if "Expecting" in str(e) or "Unterminated" in str(e):
+                fixed = fix_truncated_json(json_content)
+                # Clean fixed version
+                fixed = re.sub(r',\s*([\]}])', r'\1', fixed)
+                try:
+                    res, _ = decoder.raw_decode(fixed)
+                    return res
+                except:
+                    # Final attempt with simple json.loads
+                    return json.loads(fixed)
+            else:
+                raise e
             
     except Exception as e:
-        print(f"DEBUG: Final Repair Error: {e}")
+        print(f"DEBUG: Military Parser Error: {e}")
         err = Exception(f"JSON Parse Failed: {str(e)}")
         err.raw_content = text[:1000]
         raise err
