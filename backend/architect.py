@@ -8,24 +8,24 @@ Intent:
 {intent}
 
 Output Format:
-{
+{{
   "architectureType": "string (e.g., Monolith, Microservices)",
   "modules": [
-    {
+    {{
       "name": "string",
       "description": "string",
       "dependencies": ["string"]
-    }
+    }}
   ],
   "dataFlows": [
-    {
+    {{
       "from": "string",
       "to": "string",
       "description": "string"
-    }
+    }}
   ],
   "keyIntegrations": ["string"]
-}
+}}
 """
 
 def design_architecture(intent: dict):

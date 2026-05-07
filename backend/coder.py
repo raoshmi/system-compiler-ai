@@ -13,11 +13,11 @@ Schemas:
 {schemas}
 
 Output must be a VALID JSON object with exactly these keys:
-{
+{{
   "reactCode": "string (The complete Next.js page code)",
   "apiCode": "string (The FastAPI routes)",
   "dbCode": "string (The SQL migrations)"
-}
+}}
 """
 
 def generate_full_code(schemas: dict):

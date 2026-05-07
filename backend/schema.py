@@ -8,27 +8,27 @@ Architecture:
 {architecture}
 
 Output Format (Strict JSON):
-{
-  "dbSchema": {
+{{
+  "dbSchema": {{
     "tables": [
-      { "name": "string", "columns": [{ "name": "string", "type": "string", "required": "boolean", "primaryKey": "boolean", "foreignKey": { "table": "string", "column": "string" } }] }
+      {{ "name": "string", "columns": [{{ "name": "string", "type": "string", "required": "boolean", "primaryKey": "boolean", "foreignKey": {{ "table": "string", "column": "string" }} }}] }}
     ]
-  },
-  "apiSchema": {
+  }},
+  "apiSchema": {{
     "endpoints": [
-      { "path": "string", "method": "GET|POST|PUT|DELETE", "description": "string", "authRequired": "boolean", "roles": ["string"] }
+      {{ "path": "string", "method": "GET|POST|PUT|DELETE", "description": "string", "authRequired": "boolean", "roles": ["string"] }}
     ]
-  },
-  "uiSchema": {
+  }},
+  "uiSchema": {{
     "pages": [
-      { "route": "string", "title": "string", "layout": "string", "components": [{ "id": "string", "type": "string", "props": {}, "dataBinding": { "apiEndpoint": "string" } }] }
+      {{ "route": "string", "title": "string", "layout": "string", "components": [{{ "id": "string", "type": "string", "props": {{}}, "dataBinding": {{ "apiEndpoint": "string" }} }}] }}
     ]
-  },
-  "authSchema": {
+  }},
+  "authSchema": {{
     "roles": ["string"],
-    "rules": [{ "role": "string", "permissions": ["string"] }]
-  }
-}
+    "rules": [{{ "role": "string", "permissions": ["string"] }}]
+  }}
+}}
 """
 
 def generate_schema(architecture: dict):
