@@ -31,7 +31,7 @@ def get_llm_response(prompt: str) -> str:
     openrouter_key = os.getenv("OPENROUTER_API_KEY")
     if openrouter_key:
         try:
-            print("DEBUG: Trying OpenRouter (google/gemini-pro-1.5:free)...")
+            print("DEBUG: Trying OpenRouter (google/gemini-2.0-flash-exp:free)...")
             with httpx.Client() as client:
                 response = client.post(
                     "https://openrouter.ai/api/v1/chat/completions",
@@ -41,9 +41,9 @@ def get_llm_response(prompt: str) -> str:
                         "X-Title": "AppForge AI"
                     },
                     json={
-                        "model": "google/gemini-pro-1.5:free",
+                        "model": "google/gemini-2.0-flash-exp:free",
                         "messages": [{"role": "user", "content": prompt}],
-                        "max_tokens": 2000,
+                        "max_tokens": 4000,
                         "temperature": 0.1
                     },
                     timeout=60.0
