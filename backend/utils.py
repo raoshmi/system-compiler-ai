@@ -77,12 +77,27 @@ def get_llm_response(prompt: str) -> str:
 
 def parse_json(text: str) -> dict:
     try:
-        cleaned = re.sub(r'```json\s*|\s*```', '', text).strip()
-        start = cleaned.find('{')
-        end = cleaned.rfind('}')
-        if start != -1 and end != -1:
-            cleaned = cleaned[start:end+1]
-        return json.loads(cleaned)
+        # Try to find the first '{' and the last '}'
+        start = text.find('{')
+        end = text.rfind('}')
+        
+        if start == -1 or end == -1:
+            raise Exception("No JSON object found in response.")
+            
+        json_str = text[start:end+1]
+        
+        # Clean common LLM artifacts
+        json_str = json_str.replace('\\n', '\n').replace('\\"', '\"')
+        
+        # Handle cases where the LLM might have returned a string representation of a dict
+        try:
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            # Last ditch effort: simple cleanup of control characters
+            json_str = re.sub(r'[\x00-\x1F\x7F]', '', json_str)
+            return json.loads(json_str)
+            
     except Exception as e:
-        print(f"DEBUG: JSON Parse Error: {e}")
+        print(f"DEBUG: Aggressive JSON Parse Error: {e}")
+        print(f"DEBUG: Raw content was: {text[:200]}...")
         raise Exception("Failed to parse AI response.")
