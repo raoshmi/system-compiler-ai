@@ -32,12 +32,15 @@ Run the `start.bat` file in the root directory or start manually:
 - Backend: `python backend/main.py`
 - Frontend: `npm run dev` (in `frontend` folder)
 
-## Live Demo
-- **Frontend**: [https://system-compiler-ai-1rqk.vercel.app](https://system-compiler-ai-1rqk.vercel.app)
-- **Backend**: [https://system-compiler-ai.onrender.com](https://system-compiler-ai.onrender.com)
+## 🚀 Live Demo
+- Frontend: https://system-compiler-ai.vercel.app
+- Backend: https://tumhara-render-url.onrender.com
 
 ## Features
-- **Multi-Stage Pipeline**: Modular separation of intent, architecture, and schema.
+- Multi-agent AI pipeline
+- Interactive ERD visualizer
+- API test console
+- Full-stack zip export
 - **Surgical Repair Engine**: Detects cross-layer inconsistencies and repairs ONLY the broken sections using LLM-powered surgical patching.
 - **Fail-Safe Mock Mode**: Production resilience layer that ensures the system always returns a valid schema during high-traffic or API downtime.
 - **Real-Time Visualization**: Frontend dashboard built with Next.js 15, Framer Motion, and Glassmorphism design.
