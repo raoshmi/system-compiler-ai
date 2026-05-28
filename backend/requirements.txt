@@ -2,8 +2,10 @@ fastapi
 uvicorn
 pydantic
 google-generativeai
+groq
+openai
+requests
 python-dotenv
+anthropic
 pytest
 httpx
-groq
-anthropic
