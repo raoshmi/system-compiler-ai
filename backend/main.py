@@ -26,6 +26,7 @@ app.add_middleware(
 
 class PromptRequest(BaseModel):
     prompt: str
+    history: list = []
 
 class CodeGenerationRequest(BaseModel):
     schemas: dict
@@ -62,7 +63,7 @@ async def generate_app(request: PromptRequest):
     try:
         # Step 1: Extract Intent
         print(f"DEBUG: Processing prompt: {request.prompt[:50]}...")
-        intent_raw = extract_intent(request.prompt)
+        intent_raw = extract_intent(request.prompt, request.history)
         
         # Step 2: Design Architecture
         arch_raw = design_architecture(intent_raw)
@@ -117,6 +118,47 @@ async def generate_app(request: PromptRequest):
             "raw_response": getattr(e, 'raw_content', 'Unavailable' if is_parse_error else 'N/A'),
             "data": mock_data
         }
+
+@app.post("/brainstorm")
+async def brainstorm_ideas(request: PromptRequest):
+    try:
+        history_context = ""
+        if request.history:
+            history_context = "Conversation History:\n" + "\n".join([f"{m['role'].upper()}: {m['content']}" for m in request.history])
+            
+        prompt = f"""
+        You are a senior system architect and product strategist.
+        The user wants to brainstorm an application idea. 
+        Provide a strategic analysis, feature suggestions, and architectural considerations.
+        Do NOT generate JSON or code. Focus on discussion and planning.
+        
+        {history_context}
+        User Idea: "{request.prompt}"
+        
+        Response:
+        """
+        response = get_llm_response(prompt)
+        return {"success": True, "response": response}
+    except Exception as e:
+        print(f"ERROR in Brainstorm: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/metrics")
+async def get_metrics():
+    try:
+        if os.path.exists("evaluation_results.json"):
+            with open("evaluation_results.json", "r") as f:
+                data = json.load(f)
+                return {
+                    "success": True,
+                    "total": len(data),
+                    "success_rate": sum(1 for r in data if r['success']) / len(data) * 100,
+                    "avg_latency": sum(r['latency'] for r in data) / len(data),
+                    "raw": data
+                }
+        return {"success": False, "message": "No evaluation data found. Run evaluate.py first."}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 @app.post("/generate-code")
 async def generate_code(request: CodeGenerationRequest):

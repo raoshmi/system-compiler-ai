@@ -17,7 +17,8 @@ Output Format (Strict JSON):
   "apiSchema": {{
     "endpoints": [
       {{ "path": "string", "method": "GET|POST|PUT|DELETE", "description": "string", "authRequired": "boolean", "roles": ["string"] }}
-    ]
+    ],
+    "openApiSpec": "string (YAML OpenAPI 3.0 spec snippet)"
   }},
   "uiSchema": {{
     "pages": [
@@ -26,7 +27,18 @@ Output Format (Strict JSON):
   }},
   "authSchema": {{
     "roles": ["string"],
-    "rules": [{{ "role": "string", "permissions": ["string"] }}]
+    "rules": [{{ "role": "string", "permissions": ["string"] }}],
+    "ssoConfig": {{ "providers": ["google", "github"], "enabled": "boolean" }}
+  }},
+  "storageSchema": {{
+    "buckets": [{{ "name": "string", "access": "public|private", "maxSizeMB": "number" }}]
+  }},
+  "emailSchema": {{
+    "templates": [{{ "id": "string", "subject": "string", "trigger": "string" }}]
+  }},
+  "paymentSchema": {{
+    "provider": "stripe",
+    "plans": [{{ "id": "string", "name": "string", "amount": "number", "currency": "string", "interval": "month|year|one-time" }}]
   }}
 }}
 

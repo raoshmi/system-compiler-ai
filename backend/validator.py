@@ -48,6 +48,25 @@ def validate_schema(config: dict):
             errors.append(msg)
             log_error(msg)
 
+    # 4. Database Schema Integrity
+    for table in db_schema.get('tables', []):
+        table_name = table.get('name', 'unknown')
+        
+        # Check for Primary Key
+        has_pk = any(col.get('primaryKey') for col in table.get('columns', []))
+        if not has_pk:
+            errors.append(f"Table '{table_name}' is missing a Primary Key.")
+
+        # Check Foreign Keys
+        for col in table.get('columns', []):
+            fk = col.get('foreignKey')
+            if fk:
+                target_table = fk.get('table')
+                if target_table and target_table not in db_tables:
+                    msg = f"Table '{table_name}' has Foreign Key to undefined table: {target_table}"
+                    errors.append(msg)
+                    log_error(msg)
+
     return errors
 
 SURGICAL_REPAIR_PROMPT = """

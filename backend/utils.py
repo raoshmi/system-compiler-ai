@@ -19,9 +19,9 @@ def get_llm_response(prompt: str) -> str:
     gemini_key = os.getenv("GEMINI_API_KEY")
     if gemini_key:
         try:
-            print("DEBUG: Trying Gemini (gemini-1.5-pro)...")
+            print("DEBUG: Trying Gemini (gemini-1.5-flash)...")
             genai.configure(api_key=gemini_key)
-            model = genai.GenerativeModel("gemini-1.5-pro")
+            model = genai.GenerativeModel("gemini-1.5-flash")
             response = model.generate_content(
                 prompt,
                 generation_config=genai.types.GenerationConfig(
@@ -38,7 +38,7 @@ def get_llm_response(prompt: str) -> str:
     openrouter_key = os.getenv("OPENROUTER_API_KEY")
     if openrouter_key:
         try:
-            print("DEBUG: Trying OpenRouter (google/gemini-2.0-flash-exp:free)...")
+            print("DEBUG: Trying OpenRouter (google/gemini-2.0-flash-lite-001)...")
             with httpx.Client() as client:
                 response = client.post(
                     "https://openrouter.ai/api/v1/chat/completions",
@@ -48,7 +48,7 @@ def get_llm_response(prompt: str) -> str:
                         "X-Title": "AppForge AI"
                     },
                     json={
-                        "model": "google/gemini-2.0-flash-exp:free",
+                        "model": "google/gemini-2.0-flash-lite-001",
                         "messages": [{"role": "user", "content": prompt}],
                         "max_tokens": 8000,
                         "temperature": 0.1
